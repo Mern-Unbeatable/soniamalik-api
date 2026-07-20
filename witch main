@@ -1,0 +1,63 @@
+[1mdiff --git a/.env b/.env[m
+[1mindex 4c3ebad..fbb1221 100644[m
+[1m--- a/.env[m
+[1m+++ b/.env[m
+[36m@@ -9,8 +9,9 @@[m [mJWT_EXPIRES_IN=1d[m
+ CORS_ORIGIN=https://essahub.co.uk[m
+ MAX_FILE_SIZE=5242880[m
+ UPLOAD_PATH=./uploads[m
+[31m-SMTP_HOST=smtp.gmail.com[m
+[31m-SMTP_PORT=587[m
+[31m-SMTP_USER=shanjid.maktech@gmail.com[m
+[31m-SMTP_PASS=kxahbgcrupyogbrh[m
+[31m-EMAIL_FROM=shanjid.maktech@gmail.com[m
+\ No newline at end of file[m
+[32m+[m[32mSMTP_HOST=smtpout.secureserver.net[m
+[32m+[m[32mSMTP_PORT=465[m
+[32m+[m[32mSMTP_USER=info@essahub.co.uk[m
+[32m+[m[32mSMTP_PASS=Essahub14![m
+[32m+[m[32mEMAIL_FROM=info@essahub.co.uk[m
+[32m+[m[32mADMIN_EMAIL=info@essahub.co.uk[m
+\ No newline at end of file[m
+[1mdiff --git a/how --stat 775481a b/how --stat 775481a[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b7986d5[m
+[1m--- /dev/null[m
+[1m+++ b/how --stat 775481a[m	
+[36m@@ -0,0 +1,45 @@[m
+[32m+[m[32m[33m755cabf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: rebase (finish): returning to refs/heads/main[m
+[32m+[m[32m[33m755cabf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: pull (start): checkout 755cabf9d519f22a3ce6bfd7fa71fce6223b9805[m
+[32m+[m[32m[33m775481a[m HEAD@{2}: commit: email-sent-problem-solve[m
+[32m+[m[32m[33m4c4b96d[m HEAD@{3}: rebase (finish): returning to refs/heads/main[m
+[32m+[m[32m[33m4c4b96d[m HEAD@{4}: commit: cors-problem-solve[m
+[32m+[m[32m[33mee4ef7b[m HEAD@{5}: pull (start): checkout ee4ef7b55846ea033e087a2bb6848b19898e6f9f[m
+[32m+[m[32m[33m755cabf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{6}: commit: cors-problem-solve[m
+[32m+[m[32m[33m799ce50[m HEAD@{7}: commit: cors-problem-solve[m
+[32m+[m[32m[33m4cc6af9[m HEAD@{8}: commit: cors-problem-solve[m
+[32m+[m[32m[33m89667eb[m HEAD@{9}: commit: brand-modify-recent-update[m
+[32m+[m[32m[33md399486[m HEAD@{10}: commit: service-message-problem-fixed[m
+[32m+[m[32m[33mc9fca6c[m HEAD@{11}: commit: service-message-problem-fixed[m
+[32m+[m[32m[33me337951[m HEAD@{12}: commit: service-message-problem-fixed[m
+[32m+[m[32m[33m8f9d3f8[m HEAD@{13}: commit: fixed-postcode-update-problem[m
+[32m+[m[32m[33md806869[m HEAD@{14}: commit: fixed-about-us-page-founder-info[m
+[32m+[m[32m[33ma99b0c1[m HEAD@{15}: commit: event-message-problem-fixed[m
+[32m+[m[32m[33m48707ee[m HEAD@{16}: commit: merge[m
+[32m+[m[32m[33m856d52e[m HEAD@{17}: commit: fixed-event-time-problem[m
+[32m+[m[32m[33m4670219[m HEAD@{18}: commit: validation-problem-solve[m
+[32m+[m[32m[33m0b3b799[m HEAD@{19}: commit: event-time-problem-fixed[m
+[32m+[m[32m[33mfb19bb0[m HEAD@{20}: commit: fixed-event-problem[m
+[32m+[m[32m[33m0ab5de6[m HEAD@{21}: commit: event-time-based-problem-solve[m
+[32m+[m[32m[33m4deedad[m HEAD@{22}: commit: service-filter-fixed[m
+[32m+[m[32m[33m247d6d4[m HEAD@{23}: commit: fixed-about-us-page-founder-info[m
+[32m+[m[32m[33m6d9f0ec[m HEAD@{24}: commit: fixed-about-us-page-founder-info[m
+[32m+[m[32m[33mf4ed3ec[m HEAD@{25}: commit: fixed-about-us-page-founder-info[m
+[32m+[m[32m[33m605130e[m HEAD@{26}: commit: feature-problem-solve[m
+[32m+[m[32m[33m22da5f6[m HEAD@{27}: commit: pending-correct[m
+[32m+[m[32m[33m46c9e08[m HEAD@{28}: commit: build-problem-solve[m
+[32m+[m[32m[33mef151d4[m HEAD@{29}: commit: prisma-build[m
+[32m+[m[32m[33mf553b4c[m HEAD@{30}: commit: homepage-section-problem-solve[m
+[32m+[m[32m[33m6227328[m HEAD@{31}: commit: response-type-add[m
+[32m+[m[32m[33m0d156ef[m HEAD@{32}: pull (finish): returning to refs/heads/main[m
+[32m+[m[32m[33m0d156ef[m HEAD@{33}: pull (pick): merge[m
+[32m+[m[32m[33meadae6c[m HEAD@{34}: pull (start): checkout eadae6c4d6a663be28198f3bf1e014c9fd993d96[m
+[3

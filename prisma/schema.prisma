@@ -1,0 +1,885 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Role {
+    USER
+    ADMIN
+    PROVIDER
+    COACH
+}
+
+enum UserStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+}
+
+model User {
+    id                   String     @id @default(uuid())
+    email                String     @unique
+    password             String
+    name                 String
+    role                 Role       @default(USER)
+    status               UserStatus @default(ACTIVE)
+    avatar               String?
+    phone                String?
+    bio                  String?
+    address              String?
+    billingAddress       Json?
+    shippingAddress      Json?
+    isEmailVerified      Boolean    @default(false)
+    emailVerifyToken     String?
+    resetPasswordToken   String?
+    resetPasswordExpires DateTime?
+    lastLogin            DateTime?
+    suspensionReason     String?
+    suspendedAt          DateTime?
+    createdAt            DateTime   @default(now())
+    updatedAt            DateTime   @updatedAt
+    ageRange             String?
+    firstName            String?
+    lastName             String?
+    displayName          String?
+    postcode             String?
+    // Sport Provider (COACH) 
+    organizationName     String?
+    sessionType          String?
+    sportsOffered        String[]   @default([])
+
+    // Service Provider (PROVIDER)
+    serviceTypes      String[] @default([])
+    aboutOrganization String?  @db.Text
+
+    // Regular User specific fields
+    sportsInterests String[] @default([])
+
+    events               Event[]
+    products             Product[]
+    orders               Order[]
+    threads              Thread[]
+    threadReplies        ThreadReply[]
+    recruitments         Recruitment[]
+    services             Service[]
+    eventRegistrations   EventRegistration[]
+    serviceBookings      ServiceBooking[]
+    news                 News[]
+    club                 Club?
+    communityPosts       CommunityPost[]
+    postLikes            PostLike[]
+    postComments         PostComment[]
+    serviceMessages      ServiceMessage[]
+    eventMessages        EventMessage[]
+    notifications        Notification[]
+    userInterestRequests UserInterestRequest[]
+    savedEvents          SavedEvent[]
+
+    @@map("users")
+}
+
+enum EventStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    UPCOMING
+    ONGOING
+    COMPLETED
+    CANCELLED
+    FEATURED
+    PAST
+    BANNED
+}
+
+enum EventType {
+    MATCH
+    TOURNAMENT
+    TRIAL
+    TRAINING
+    WORKSHOP
+    SEMINAR
+    COMPETITION
+    MEETUP
+}
+
+enum SkillLevel {
+    BEGINNER
+    INTERMEDIATE
+    ADVANCED
+    ALL_LEVELS
+}
+
+enum UserResponseType {
+    INTERESTED
+    REGISTER
+}
+
+model Event {
+    id                  String              @id @default(uuid())
+    title               String?
+    sportType           String?
+    description         String?             @db.Text
+    eventType           EventType?
+    status              EventStatus         @default(PENDING)
+    startDate           DateTime
+    endDate             DateTime
+    startTime           String?
+    endTime             String?
+    venueName           String?
+    city                String?
+    fullAddress         String?             @db.Text
+    googleMapLink       String?
+    minAge              Int?
+    maxParticipants     Int?
+    currentParticipants Int?                @default(0)
+    responseMethods     String[]            @default([])
+    suitableFor         String[]            @default([])
+    skillLevel          Json?
+    registrationFee     Decimal?            @default(0) @db.Decimal(10, 2)
+    costType            String              @default("free")
+    image               String?
+    organizerName       String
+    organizerPhone      String?
+    organizerEmail      String
+    organizerId         String
+    organizer           User                @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+    isApproved          Boolean             @default(false)
+    rejectionReason     String?             @db.Text
+    isFeatured          Boolean             @default(false)
+    featuredAt          DateTime?
+    featuredBy          String?
+    bannedReason        String?             @db.Text
+    bannedAt            DateTime?
+    createdAt           DateTime            @default(now())
+    updatedAt           DateTime            @updatedAt
+    bookingLink         String?
+    savedBy             SavedEvent[]
+    registrations       EventRegistration[]
+    analytics           EventAnalytics[]
+    messages            EventMessage[]
+    responseType        UserResponseType    @default(INTERESTED)
+
+    @@map("events")
+}
+
+model SavedEvent {
+    id        String   @id @default(uuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    eventId   String
+    event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+
+    @@unique([userId, eventId])
+    @@map("saved_events")
+}
+
+model EventRegistration {
+    id               String   @id @default(uuid())
+    eventId          String?
+    event            Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    userId           String?
+    user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    fullName         String
+    email            String
+    phoneNumber      String
+    registeredAt     DateTime @default(now())
+    attended         Boolean  @default(false)
+    status           String   @default("pending")
+    registrationType String   @default("registration")
+    paymentStatus    String   @default("pending")
+    notes            String?  @db.Text
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    @@map("event_registrations")
+}
+
+model EventAnalytics {
+    id             String   @id @default(uuid())
+    eventId        String
+    event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    views          Int      @default(0)
+    registrations  Int      @default(0)
+    completionRate Decimal  @default(0) @db.Decimal(5, 2)
+    revenue        Decimal  @default(0) @db.Decimal(10, 2)
+    rating         Decimal? @db.Decimal(3, 2)
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+
+    @@map("event_analytics")
+}
+
+model EventMessage {
+    id        String         @id @default(uuid())
+    eventId   String
+    event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+    userId    String
+    user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    message   String         @db.Text
+    parentId  String?
+    parent    EventMessage?  @relation("MessageReplies", fields: [parentId], references: [id])
+    replies   EventMessage[] @relation("MessageReplies")
+    isReply   Boolean        @default(false)
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+
+    @@index([eventId])
+    @@index([parentId])
+    @@index([createdAt])
+    @@map("event_messages")
+}
+
+enum ProductStatus {
+    AVAILABLE
+    OUT_OF_STOCK
+    DISCONTINUED
+    PENDING
+}
+
+enum ProductCategory {
+    EQUIPMENT
+    APPAREL
+    ACCESSORIES
+    NUTRITION
+    RECOVERY
+    OTHER
+}
+
+model Product {
+    id          String          @id @default(uuid())
+    name        String
+    description String          @db.Text
+    price       Decimal         @db.Decimal(10, 2)
+    category    ProductCategory
+    status      ProductStatus   @default(PENDING)
+    stock       Int             @default(0)
+    image       String?
+    images      String[]        @default([])
+    sellerId    String
+    seller      User            @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+    isApproved  Boolean         @default(false)
+    createdAt   DateTime        @default(now())
+    updatedAt   DateTime        @updatedAt
+
+    orderItems OrderItem[]
+
+    @@map("products")
+}
+
+enum OrderStatus {
+    PENDING
+    CONFIRMED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELLED
+    REFUNDED
+}
+
+enum PaymentMethod {
+    CREDIT_CARD
+    DEBIT_CARD
+    PAYPAL
+    BANK_TRANSFER
+    CASH_ON_DELIVERY
+}
+
+model Order {
+    id              String        @id @default(uuid())
+    orderNumber     String        @unique
+    userId          String
+    user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    status          OrderStatus   @default(PENDING)
+    totalAmount     Decimal       @db.Decimal(10, 2)
+    shippingAddress String        @db.Text
+    paymentMethod   PaymentMethod
+    paymentStatus   String        @default("pending")
+    notes           String?       @db.Text
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+
+    items OrderItem[]
+
+    @@map("orders")
+}
+
+model OrderItem {
+    id        String   @id @default(uuid())
+    orderId   String
+    order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    productId String
+    product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+    quantity  Int
+    price     Decimal  @db.Decimal(10, 2)
+    createdAt DateTime @default(now())
+
+    @@map("order_items")
+}
+
+enum ServiceStatus {
+    ACTIVE
+    INACTIVE
+    PENDING
+    SUSPENDED
+    FEATURED
+    BANNED
+}
+
+enum ServiceType {
+    COACHING
+    TRAINING
+    THERAPY
+    CONSULTATION
+    NUTRITION
+    OTHER
+}
+
+model Service {
+    id              String   @id @default(uuid())
+    // Core listing info
+    listingHeadline String?
+    aboutService    String?  @db.Text
+    // Provider info
+    providerName    String
+    contactName     String?
+    providerPhone   String
+    providerEmail   String
+    providerId      String
+    provider        User     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+    // Provider type / profession
+    providerType    String[] @default([])
+    clinicName      String?
+    addressLine1    String?
+    city            String?
+    postcode        String?
+    location        String?
+    googleMapLink   String?
+    fullAddress     String?
+    // Session info
+
+    sports                   String[]      @default([])
+    isOnline                 Boolean       @default(false)
+    // Credentials
+    professionalRegistration String?
+    costMemebershipDetail    String?
+    insuranceInPlace         Boolean       @default(false)
+    // Participant response
+    participantResponseType  String        @default("BY_DEFAULT")
+    bookingLink              String?
+    // Status & approval
+    status                   ServiceStatus @default(PENDING)
+    isApproved               Boolean       @default(false)
+    rejectionReason          String?       @db.Text
+    isFeatured               Boolean       @default(false)
+    featuredAt               DateTime?
+    featuredBy               String?
+    bannedReason             String?       @db.Text
+    bannedAt                 DateTime?
+    // Image
+    logo                     String?
+    // Legacy fields kept for compatibility
+    duration                 Int           @default(60)
+    visibility               String?       @default("public")
+    availableDays            String[]      @default([])
+    createdAt                DateTime?     @default(now())
+    updatedAt                DateTime?     @updatedAt
+    organizationName         String?
+    role                     String?
+    description              String?
+    sessionTypes             String[]      @default([])
+    suitableFor              String[]      @default([])
+    womenOnly                Boolean       @default(false)
+    sessonDay                String?
+    date                     String?
+    timeSlote                String?
+
+    bookings     ServiceBooking[]
+    analytics    ServiceAnalytics[]
+    messages     ServiceMessage[]
+    responseType UserResponseType   @default(INTERESTED)
+
+    @@map("services")
+}
+
+model ServiceBooking {
+    id            String    @id @default(uuid())
+    serviceId     String
+    service       Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    userId        String?
+    user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    fullName      String
+    email         String
+    phoneNumber   String
+    type          String    @default("booking")
+    aboutMe       String?   @db.Text
+    bookingDate   DateTime?
+    status        String    @default("pending")
+    paymentStatus String    @default("pending")
+    notes         String?   @db.Text
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    @@map("service_bookings")
+}
+
+model ServiceMessage {
+    id        String           @id @default(uuid())
+    serviceId String
+    service   Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    senderId  String
+    sender    User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
+    message   String           @db.Text
+    parentId  String?
+    parent    ServiceMessage?  @relation("MessageReplies", fields: [parentId], references: [id])
+    replies   ServiceMessage[] @relation("MessageReplies")
+    isReply   Boolean          @default(false)
+    isRead    Boolean          @default(false)
+    createdAt DateTime         @default(now())
+    updatedAt DateTime         @updatedAt
+
+    @@index([serviceId])
+    @@index([parentId])
+    @@index([createdAt])
+    @@index([senderId])
+    @@map("service_messages")
+}
+
+model ServiceAnalytics {
+    id        String   @id @default(uuid())
+    serviceId String
+    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    views     Int      @default(0)
+    bookings  Int      @default(0)
+    revenue   Decimal  @default(0) @db.Decimal(10, 2)
+    rating    Decimal? @db.Decimal(3, 2)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("service_analytics")
+}
+
+enum ThreadCategory {
+    GENERAL
+    TRAINING
+    NUTRITION
+    INJURY
+    EQUIPMENT
+    EVENTS
+    SUPPORT
+    OTHER
+}
+
+enum ThreadStatus {
+    OPEN
+    CLOSED
+    PINNED
+    ARCHIVED
+}
+
+model Thread {
+    id        String         @id @default(uuid())
+    title     String
+    content   String         @db.Text
+    category  ThreadCategory @default(GENERAL)
+    status    ThreadStatus   @default(OPEN)
+    authorId  String
+    author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    views     Int            @default(0)
+    isPinned  Boolean        @default(false)
+    isLocked  Boolean        @default(false)
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+
+    replies ThreadReply[]
+
+    @@map("threads")
+}
+
+model ThreadReply {
+    id        String   @id @default(uuid())
+    threadId  String
+    thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+    authorId  String
+    author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    content   String   @db.Text
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("thread_replies")
+}
+
+enum RecruitmentStatus {
+    OPEN
+    CLOSED
+    FILLED
+    CANCELLED
+}
+
+enum PositionType {
+    FULL_TIME
+    PART_TIME
+    VOLUNTEER
+    CONTRACT
+    INTERNSHIP
+}
+
+model Recruitment {
+    id           String                   @id @default(uuid())
+    title        String
+    description  String                   @db.Text
+    position     String
+    positionType PositionType
+    status       RecruitmentStatus        @default(OPEN)
+    requirements String[]                 @default([])
+    benefits     String[]                 @default([])
+    salary       String?
+    location     String
+    isRemote     Boolean                  @default(false)
+    deadline     DateTime?
+    openings     Int                      @default(1)
+    clubId       String?
+    posterId     String
+    poster       User                     @relation(fields: [posterId], references: [id], onDelete: Cascade)
+    createdAt    DateTime                 @default(now())
+    updatedAt    DateTime                 @updatedAt
+    applications RecruitmentApplication[]
+
+    @@map("recruitments")
+}
+
+model RecruitmentApplication {
+    id            String      @id @default(uuid())
+    recruitmentId String
+    recruitment   Recruitment @relation(fields: [recruitmentId], references: [id], onDelete: Cascade)
+    applicantName String
+    email         String
+    phone         String
+    resume        String?
+    coverLetter   String?     @db.Text
+    status        String      @default("pending")
+    createdAt     DateTime    @default(now())
+    updatedAt     DateTime    @updatedAt
+
+    @@map("recruitment_applications")
+}
+
+enum ClubStatus {
+    ACTIVE
+    INACTIVE
+    PENDING
+}
+
+model Club {
+    id              String     @id @default(uuid())
+    name            String
+    description     String     @db.Text
+    image           String?
+    ownerName       String
+    contactEmail    String
+    contactPhone    String
+    fullAddress     String     @db.Text
+    website         String?
+    groundName      String?
+    groundType      String?
+    activePlayers   Int        @default(0)
+    coachesCount    Int        @default(0)
+    teamsCount      Int        @default(0)
+    hostingSessions Int        @default(0)
+    status          ClubStatus @default(ACTIVE)
+    coachId         String     @unique
+    coach           User       @relation(fields: [coachId], references: [id], onDelete: Cascade)
+    createdAt       DateTime   @default(now())
+    updatedAt       DateTime   @updatedAt
+
+    @@map("clubs")
+}
+
+enum NewsStatus {
+    DRAFT
+    PUBLISHED
+    ARCHIVED
+}
+
+model News {
+    id          String     @id @default(uuid())
+    title       String
+    content     String     @db.Text
+    excerpt     String?
+    image       String?
+    status      NewsStatus @default(DRAFT)
+    authorId    String
+    author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    publishedAt DateTime?
+    views       Int        @default(0)
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+
+    @@map("news")
+}
+
+model SystemSetting {
+    id          String   @id @default(uuid())
+    key         String   @unique
+    value       String   @db.Text
+    description String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@map("system_settings")
+}
+
+enum CommunityCategory {
+    STORIES
+    QUESTIONS
+    SUPPORT
+}
+
+model CommunityPost {
+    id            String            @id @default(uuid())
+    title         String
+    description   String            @db.Text
+    category      CommunityCategory
+    sport         String?
+    tags          String[]          @default([])
+    location      String?
+    date          String?
+    time          String?
+    helpType      String?
+    authorId      String
+    author        User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    likesCount    Int               @default(0)
+    commentsCount Int               @default(0)
+    createdAt     DateTime          @default(now())
+    updatedAt     DateTime          @updatedAt
+
+    likes    PostLike[]
+    comments PostComment[]
+
+    @@index([authorId])
+    @@index([category])
+    @@index([createdAt])
+    @@map("community_posts")
+}
+
+enum ReactionType {
+    LIKE
+    LOVE
+    HAHA
+    WOW
+    SAD
+    ANGRY
+}
+
+model PostLike {
+    id        String        @id @default(uuid())
+    postId    String
+    post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+    userId    String
+    user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    type      ReactionType  @default(LIKE)
+    createdAt DateTime      @default(now())
+
+    @@unique([postId, userId])
+    @@index([postId])
+    @@index([userId])
+    @@index([type])
+    @@map("post_likes")
+}
+
+model PostComment {
+    id        String        @id @default(uuid())
+    content   String        @db.Text
+    postId    String
+    post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+    authorId  String
+    author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    parentId  String?
+    parent    PostComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+    replies   PostComment[] @relation("CommentReplies")
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
+
+    @@index([postId])
+    @@index([authorId])
+    @@index([parentId])
+    @@map("post_comments")
+}
+
+enum PageType {
+    LANDING
+    ABOUT_US
+    COLLABORATE
+    HOME
+}
+
+model HomeSection {
+    id                        String   @id @default(uuid())
+    page                      PageType @unique
+    title                     String?
+    subtitle                  String?
+    description               String?  @db.Text
+    image                     String?
+    order                     Int      @default(0)
+    isActive                  Boolean  @default(true)
+    createdAt                 DateTime @default(now())
+    updatedAt                 DateTime @updatedAt
+    aboutImages               String[]
+    founderInfo               Json?
+    sportsProviderImg         String?
+    sportsProviderDescription String?
+    supportImg                String?
+    supportDescription        String?
+    brandImg                  String?
+    brandDescription          String?
+    sectionTitle              String?
+    sectionSubTitle           String?
+    sportTitle                String?
+    sportSubTitle             String?
+
+    @@index([page])
+    @@index([order])
+    @@index([isActive])
+    @@map("home_sections")
+}
+
+model Card {
+    id          String   @id @default(uuid())
+    title       String
+    subtitle    String?
+    description String?  @db.Text
+    image       String?
+    order       Int      @default(0)
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@index([order])
+    @@map("cards")
+}
+
+model Brand {
+    id               String @id @default(uuid())
+    name             String
+    email            String
+    phone            String
+    postCode         String
+    businessname     String
+    offer            String
+    socialMediaLinks String
+    message          String
+
+    @@map("brands")
+}
+
+enum NotificationType {
+    BOOKING_CREATED
+    BOOKING_CONFIRMED
+    BOOKING_CANCELLED
+    BOOKING_COMPLETED
+    INTEREST_RECEIVED
+    INTEREST_UPDATED
+    MESSAGE_RECEIVED
+    MESSAGE_REPLY_RECEIVED
+    SERVICE_APPROVED
+    SERVICE_REJECTED
+    SERVICE_FEATURED
+    SERVICE_BANNED
+    EVENT_REGISTRATION
+    EVENT_CANCELLED
+    EVENT_APPROVED
+    EVENT_REJECTED
+    EVENT_MESSAGE_RECEIVED
+    EVENT_MESSAGE_REPLY_RECEIVED
+    POST_COMMENT
+    POST_LIKE
+    POST_REPLY
+    NEW_SIGNUP
+}
+
+model Notification {
+    id        String           @id @default(uuid())
+    userId    String
+    user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    type      NotificationType
+    title     String
+    message   String           @db.Text
+    data      Json?
+    isRead    Boolean          @default(false)
+    isDeleted Boolean          @default(false)
+    createdAt DateTime         @default(now())
+    updatedAt DateTime         @updatedAt
+
+    @@index([userId])
+    @@index([userId, isRead])
+    @@index([createdAt])
+    @@index([type])
+    @@map("notifications")
+}
+
+enum InterestLevel {
+    NEW_TO_SPORT
+    SOME_EXPERIENCE
+    REGULAR_PLAYER
+    COMPETITIVE
+}
+
+enum PreferredDay {
+    WEEKDAY_EVENINGS
+    WEEKDAY_DAYTIME
+    SATURDAY
+    SUNDAY
+    FLEXIBLE
+}
+
+enum SessionPreference {
+    WOMEN_ONLY
+    MIXED
+    NO_PREFERENCE
+}
+
+model UserInterestRequest {
+    id              String            @id @default(uuid())
+    userId          String
+    user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    sportName       String
+    otherSportName  String?
+    level           InterestLevel
+    preferredDays   PreferredDay[]
+    preference      SessionPreference
+    wantToHelpStart Boolean
+    status          String            @default("PENDING")
+    adminNotes      String?           @db.Text
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @updatedAt
+
+    @@index([userId])
+    @@index([status])
+    @@index([sportName])
+    @@map("user_interest_requests")
+}
+
+model SportsCategory {
+    id        String   @id @default(uuid())
+    name      String   @unique
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("sports_categories")
+}
+
+model Contact {
+    id        String   @id @default(uuid())
+    name      String
+    email     String
+    subject   String
+    message   String   @db.Text
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("contacts")
+}
