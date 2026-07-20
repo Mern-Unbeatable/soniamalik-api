@@ -1,7 +1,6 @@
 import nodemailer from "nodemailer";
 import { config } from "../config/index.js";
 
-// Create transporter
 const transporter = nodemailer.createTransport({
   host: config.email.host,
   port: config.email.port,
@@ -12,9 +11,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/**
- * Send verification email
- */
+
 export async function sendVerificationEmail(email, name, verificationCode) {
   const mailOptions = {
     from: `"ESSAHUB Platform" <${config.email.user}>`,
