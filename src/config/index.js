@@ -26,11 +26,11 @@ export const config = {
   maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 5242880, // 5MB
   uploadPath: process.env.UPLOAD_PATH || "./uploads",
 
-  // Email
+
   email: {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.EMAIL_SECURE === "true",
+    secure: parseInt(process.env.SMTP_PORT) === 465,
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
