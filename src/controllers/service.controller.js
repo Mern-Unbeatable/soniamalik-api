@@ -94,9 +94,6 @@ export async function createService(req, res) {
   }
 }
 
-
-
-
 export async function updateService(req, res) {
   try {
     const { id } = req.params;

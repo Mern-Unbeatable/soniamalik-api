@@ -80,7 +80,9 @@ export const createServiceSchema = z.object({
   providerEmail: z.string().email().optional(),
   responseType: responseTypeEnum.optional(),
   providerType: optionalStringArray,
-
+  whoCanTakePart: z.string({ required_error: 'Who can take part is required' }),
+  startTime: z.string({ required_error: ' Start time is requied' }),
+  endTime: z.string({ required_error: 'End time is required' }),
   clinicName: optionalString,
   addressLine1: optionalString,
   city: optionalString,
@@ -108,7 +110,7 @@ export const createServiceSchema = z.object({
 
   duration: optionalNumber,
   visibility: optionalString,
-  availableDays: optionalStringArray, // Changed to array
+  availableDays: optionalStringArray,
 
   organizationName: optionalString,
   role: optionalString,
@@ -117,9 +119,9 @@ export const createServiceSchema = z.object({
   suitableFor: optionalStringArray,
   womenOnly: optionalBoolean,
 
-  sessonDay: optionalString, // Fixed typo
+  sessonDay: optionalString,
   date: optionalString,
-  timeSlote: optionalString, // Fixed typo
+  timeSlote: optionalString,
 });
 
 export const updateServiceSchema = createServiceSchema.partial();

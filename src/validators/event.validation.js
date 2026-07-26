@@ -239,7 +239,7 @@ const dateNotInPast = z.date().refine(
   }
 );
 
-// Create Event Schema
+
 export const createEventSchema = z
   .object({
     title: z
@@ -282,7 +282,11 @@ export const createEventSchema = z
         required_error: "Venue name is required",
       })
       .min(2, "Venue name must be at least 2 characters"),
-
+    postCode: z
+      .string({
+        required_error: "Post code is required",
+      })
+      .min(1, "Post code is required"),
     city: z
       .string({
         required_error: "City is required",
@@ -424,7 +428,9 @@ export const updateEventSchema = z
     responseType: responseTypeEnum.optional(),
 
     venueName: z.string().min(2, "Venue name must be at least 2 characters").optional(),
-
+    postCode: z
+      .string().optional()
+    ,
     city: z.string().min(2, "City must be at least 2 characters").optional(),
 
     bookingLink: z.string().optional(),
@@ -473,7 +479,6 @@ export const updateEventSchema = z
     suitableFor: optionalStringArray,
   })
 
-  // Cross-field validation: If both dates provided, end date must be after or equal to start date
   .refine(
     (data) => {
       if (!data.startDate || !data.endDate) return true;

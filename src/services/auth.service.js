@@ -245,6 +245,7 @@ export async function forgotPassword(email) {
     },
   });
 
+
   try {
     await sendPasswordResetEmail(email, user.name, otp);
   } catch (error) {

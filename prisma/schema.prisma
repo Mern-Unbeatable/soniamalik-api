@@ -130,6 +130,7 @@ model Event {
     startTime           String?
     endTime             String?
     venueName           String?
+    postCode            String?
     city                String?
     fullAddress         String?             @db.Text
     googleMapLink       String?
@@ -397,6 +398,9 @@ model Service {
     sessonDay                String?
     date                     String?
     timeSlote                String?
+    whoCanTakePart           String?
+    startTime                String?
+    endTime                  String?
 
     bookings     ServiceBooking[]
     analytics    ServiceAnalytics[]

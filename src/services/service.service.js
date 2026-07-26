@@ -910,6 +910,7 @@ export async function getProviderServices(providerId, filters = {}) {
   };
 }
 
+
 // export async function createService(serviceData, req, logoPath = null) {
 //   // Clean and prepare the data
 //   const preparedData = { ...serviceData };
@@ -925,7 +926,6 @@ export async function getProviderServices(providerId, filters = {}) {
 //   }
 
 //   // Ensure providerType is an array
-
 //   if (preparedData.providerType && !Array.isArray(preparedData.providerType)) {
 //     preparedData.providerType = [preparedData.providerType];
 //   }
@@ -944,26 +944,28 @@ export async function getProviderServices(providerId, filters = {}) {
 //   if (preparedData.sports && !Array.isArray(preparedData.sports)) {
 //     preparedData.sports = preparedData.sports.split(',').map(s => s.trim());
 //   }
+
 //   // Ensure availableDays is an array
 //   if (preparedData.availableDays && !Array.isArray(preparedData.availableDays)) {
 //     preparedData.availableDays = preparedData.availableDays.split(',').map(s => s.trim());
 //   }
+
 //   // Handle field name typos - map sessionDay, timeSlot if they come as sessonDay or timeSlote
 //   if (preparedData.sessonDay) {
 //     preparedData.sessonDay = preparedData.sessonDay;
-
 //   }
 
 //   if (preparedData.timeSlote) {
 //     preparedData.timeSlote = preparedData.timeSlote;
-//     // delete preparedData.timeSlote;
 //   }
 
-//   if (preparedData.costMembershipDetails) {
-//     preparedData.costMembershipDetails = preparedData.costMembershipDetails.trim();
+
+//   if (preparedData.costMemebershipDetail) {
+//     preparedData.costMemebershipDetail = preparedData.costMemebershipDetail.trim();
 //   }
-//   preparedData.responseType =
-//     preparedData.responseType || "INTERESTED";
+
+//   preparedData.responseType = preparedData.responseType || "INTERESTED";
+
 //   // Build full address
 //   const fullAddress = [
 //     preparedData.addressLine1,
@@ -984,7 +986,6 @@ export async function getProviderServices(providerId, filters = {}) {
 //         providerEmail: req.user.email || "",
 //         status: "PENDING",
 //         isApproved: false,
-
 //       },
 //     });
 
@@ -1010,7 +1011,80 @@ export async function getProviderServices(providerId, filters = {}) {
 //     };
 //   }
 // }
+// export async function updateService(
 
+//   serviceId,
+//   updateData,
+//   userId,
+//   userRole,
+//   logoPath = null
+// ) {
+//   const service = await prisma.service.findUnique({
+//     where: { id: serviceId },
+//   });
+
+//   if (!service) {
+//     throw { statusCode: 404, message: "Service not found" };
+//   }
+
+//   if (userRole !== "ADMIN" && userRole !== "COACH" && userRole !== 'PROVIDER' && service.providerId !== userId) {
+//     throw {
+//       statusCode: 403,
+//       message: "Not authorized to update this service",
+//     };
+//   }
+
+//   const data = { ...updateData };
+
+//   // Clean the data similar to create
+//   if (data.duration !== undefined) {
+//     const durationNum = parseInt(data.duration);
+//     data.duration = !isNaN(durationNum) ? durationNum : undefined;
+//   }
+
+//   // Handle array fields
+//   const arrayFields = ['sports', 'sessionTypes', 'suitableFor', 'providerType', 'availableDays'];
+//   arrayFields.forEach(field => {
+//     if (data[field] && typeof data[field] === 'string') {
+//       data[field] = data[field].split(',').map(s => s.trim());
+//     }
+//   });
+
+//   // Handle boolean fields
+//   const booleanFields = ['insuranceInPlace', 'isOnline', 'womenOnly'];
+//   booleanFields.forEach(field => {
+//     if (data[field] !== undefined) {
+//       data[field] = data[field] === true || data[field] === "true";
+//     }
+//   });
+
+//   if (logoPath) {
+//     data.logo = logoPath;
+//   }
+
+//   // rebuild fullAddress
+//   if (data.addressLine1 || data.city || data.postcode) {
+//     data.fullAddress = [
+//       data.addressLine1 || service.addressLine1,
+//       data.city || service.city,
+//       data.postcode || service.postcode,
+//     ]
+//       .filter(Boolean)
+//       .join(", ");
+//   }
+
+//   const updatedService = await prisma.service.update({
+//     where: { id: serviceId },
+//     data,
+//     include: {
+//       provider: {
+//         select: { id: true, name: true, email: true, avatar: true },
+//       },
+//     },
+//   });
+
+//   return transformServiceUrls(updatedService);
+// }
 export async function createService(serviceData, req, logoPath = null) {
   // Clean and prepare the data
   const preparedData = { ...serviceData };
@@ -1050,6 +1124,19 @@ export async function createService(serviceData, req, logoPath = null) {
     preparedData.availableDays = preparedData.availableDays.split(',').map(s => s.trim());
   }
 
+  // NEW: Handle the new fields - ensure they're strings
+  if (preparedData.whoCanTakePart !== undefined) {
+    preparedData.whoCanTakePart = String(preparedData.whoCanTakePart).trim();
+  }
+
+  if (preparedData.startTime !== undefined) {
+    preparedData.startTime = String(preparedData.startTime).trim();
+  }
+
+  if (preparedData.endTime !== undefined) {
+    preparedData.endTime = String(preparedData.endTime).trim();
+  }
+
   // Handle field name typos - map sessionDay, timeSlot if they come as sessonDay or timeSlote
   if (preparedData.sessonDay) {
     preparedData.sessonDay = preparedData.sessonDay;
@@ -1058,7 +1145,6 @@ export async function createService(serviceData, req, logoPath = null) {
   if (preparedData.timeSlote) {
     preparedData.timeSlote = preparedData.timeSlote;
   }
-
 
   if (preparedData.costMemebershipDetail) {
     preparedData.costMemebershipDetail = preparedData.costMemebershipDetail.trim();
@@ -1112,7 +1198,6 @@ export async function createService(serviceData, req, logoPath = null) {
   }
 }
 export async function updateService(
-
   serviceId,
   updateData,
   userId,
@@ -1158,6 +1243,14 @@ export async function updateService(
     }
   });
 
+  // NEW: Handle the new string fields
+  const stringFields = ['whoCanTakePart', 'startTime', 'endTime'];
+  stringFields.forEach(field => {
+    if (data[field] !== undefined && data[field] !== null) {
+      data[field] = String(data[field]).trim();
+    }
+  });
+
   if (logoPath) {
     data.logo = logoPath;
   }
@@ -1185,7 +1278,6 @@ export async function updateService(
 
   return transformServiceUrls(updatedService);
 }
-
 
 export async function deleteService(serviceId, userId, userRole) {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });

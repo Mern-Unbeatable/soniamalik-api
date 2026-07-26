@@ -57,6 +57,7 @@ export const createEvent = catchAsync(async (req, res) => {
   console.log('request user check this', req.user)
   const eventData = {
     ...req.body,
+    postCode: req.body.postCode,
     startDate: new Date(req.body.startDate),
     endDate: new Date(req.body.endDate),
     minAge: req.body.minAge ? Number(req.body.minAge) : null,
@@ -104,7 +105,8 @@ export async function updateEvent(req, res) {
       "organizerPhone",
       "organizerEmail",
       "image",
-      "responseType"
+      "responseType",
+      "postCode"
     ];
 
     allowedFields.forEach((field) => {
@@ -446,9 +448,6 @@ export async function toggleBanStatus(req, res) {
 
 // ==================== EVENT MESSAGING CONTROLLERS ====================
 
-/**
- * Post a question or reply to event
- */
 
 export const postEventMessage = async (req, res) => {
   try {
