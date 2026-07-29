@@ -283,10 +283,7 @@ export const createEventSchema = z
       })
       .min(2, "Venue name must be at least 2 characters"),
     postCode: z
-      .string({
-        required_error: "Post code is required",
-      })
-      .min(1, "Post code is required"),
+      .string().optional(),
     city: z
       .string({
         required_error: "City is required",
