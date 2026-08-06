@@ -89,6 +89,7 @@ router.get(
 router.get("/", optionalAuth, asyncHandler(eventController.getAllEvents));
 
 
+
 router.get(
   "/:id",
   optionalAuth,
