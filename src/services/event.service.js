@@ -4,13 +4,6 @@ import PrismaQueryBuilder from "../shared/query-builder.js";
 import * as notificationService from "./notification.service.js";
 
 
-const DEFAULT_PUBLIC_EVENT_STATUSES = [
-  "APPROVED",
-  "UPCOMING",
-  "ONGOING",
-  "FEATURED",
-];
-
 function generateBookingLink(eventId) {
   return `${config.frontendUrl}/events/${eventId}`;
 }
@@ -141,24 +134,6 @@ function buildViewCondition(view, now, includeLiveRules) {
     case "approved":
       return { status: "APPROVED" };
 
-    case "featured":
-      return {
-        isFeatured: true,
-        status: {
-          notIn: ["PENDING", "REJECTED", "BANNED", "CANCELLED"],
-        },
-      };
-
-    case "past":
-      return {
-        status: {
-          in: ["PAST", "COMPLETED"],
-        },
-      };
-
-    case "banned":
-      return { status: "BANNED" };
-
     case "cancelled":
       return { status: "CANCELLED" };
 
@@ -284,14 +259,10 @@ export async function getAllEvents(query = {}, userRole = null, userId = null) {
   if (userRole !== "ADMIN") {
     const publicVisibilityCondition = {
       isApproved: true,
+      status: {
+        in: ["APPROVED", "UPCOMING", "ONGOING", "COMPLETED"],
+      },
     };
-
-    // Default listing: show active approved events unless a view/status filter is used.
-    if (!query.view && !query.status) {
-      publicVisibilityCondition.status = {
-        in: DEFAULT_PUBLIC_EVENT_STATUSES,
-      };
-    }
 
     const visibilityCondition = userId
       ? {
@@ -316,6 +287,7 @@ export async function getAllEvents(query = {}, userRole = null, userId = null) {
 
   return result;
 }
+
 
 
 

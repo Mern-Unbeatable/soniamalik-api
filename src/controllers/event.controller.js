@@ -34,6 +34,7 @@ export async function getAllEvents(req, res) {
 
 
 
+
 export async function getEventById(req, res) {
   try {
     const { id } = req.params;
