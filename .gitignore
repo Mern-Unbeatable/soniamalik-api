@@ -25,3 +25,4 @@ Thumbs.db
 prisma/migrations/
 config.bat
 .env
+.getaibd/

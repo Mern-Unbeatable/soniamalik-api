@@ -104,6 +104,12 @@ enum EventType {
     SEMINAR
     COMPETITION
     MEETUP
+    OPEN_DAY
+    TASTER_SESSION
+    TALK
+    CHARITY_EVENT
+    SOCIAL_EVENT
+    OTHER
 }
 
 enum SkillLevel {
