@@ -80,6 +80,12 @@ const eventTypeEnum = z.enum([
   "SEMINAR",
   "COMPETITION",
   "MEETUP",
+  "OPEN_DAY",
+  "TASTER_SESSION",
+  "TALK",
+  "CHARITY_EVENT",
+  "SOCIAL_EVENT",
+  "OTHER",
 ]);
 
 const responseTypeEnum = z.enum([
