@@ -911,183 +911,11 @@ export async function getProviderServices(providerId, filters = {}) {
 }
 
 
-// export async function createService(serviceData, req, logoPath = null) {
-//   // Clean and prepare the data
-//   const preparedData = { ...serviceData };
-
-//   // Handle duration - ensure it's a valid number
-//   if (preparedData.duration !== undefined && preparedData.duration !== null && preparedData.duration !== '') {
-//     const durationNum = parseInt(preparedData.duration);
-//     if (!isNaN(durationNum)) {
-//       preparedData.duration = durationNum;
-//     } else {
-//       delete preparedData.duration;
-//     }
-//   }
-
-//   // Ensure providerType is an array
-//   if (preparedData.providerType && !Array.isArray(preparedData.providerType)) {
-//     preparedData.providerType = [preparedData.providerType];
-//   }
-
-//   // Ensure sessionTypes is an array
-//   if (preparedData.sessionTypes && !Array.isArray(preparedData.sessionTypes)) {
-//     preparedData.sessionTypes = preparedData.sessionTypes.split(',').map(s => s.trim());
-//   }
-
-//   // Ensure suitableFor is an array
-//   if (preparedData.suitableFor && !Array.isArray(preparedData.suitableFor)) {
-//     preparedData.suitableFor = preparedData.suitableFor.split(',').map(s => s.trim());
-//   }
-
-//   // Ensure sports is an array
-//   if (preparedData.sports && !Array.isArray(preparedData.sports)) {
-//     preparedData.sports = preparedData.sports.split(',').map(s => s.trim());
-//   }
-
-//   // Ensure availableDays is an array
-//   if (preparedData.availableDays && !Array.isArray(preparedData.availableDays)) {
-//     preparedData.availableDays = preparedData.availableDays.split(',').map(s => s.trim());
-//   }
-
-//   // Handle field name typos - map sessionDay, timeSlot if they come as sessonDay or timeSlote
-//   if (preparedData.sessonDay) {
-//     preparedData.sessonDay = preparedData.sessonDay;
-//   }
-
-//   if (preparedData.timeSlote) {
-//     preparedData.timeSlote = preparedData.timeSlote;
-//   }
-
-
-//   if (preparedData.costMemebershipDetail) {
-//     preparedData.costMemebershipDetail = preparedData.costMemebershipDetail.trim();
-//   }
-
-//   preparedData.responseType = preparedData.responseType || "INTERESTED";
-
-//   // Build full address
-//   const fullAddress = [
-//     preparedData.addressLine1,
-//     preparedData.city,
-//     preparedData.postcode
-//   ].filter(Boolean).join(", ");
-
-//   try {
-//     const service = await prisma.service.create({
-//       data: {
-//         ...preparedData,
-//         fullAddress: fullAddress || null,
-//         logo: logoPath || null,
-//         providerId: req.user.id,
-//         providerName: req.user.name || "Unknown",
-//         contactName: req.user.name || null,
-//         providerPhone: req.user.phone || "",
-//         providerEmail: req.user.email || "",
-//         status: "PENDING",
-//         isApproved: false,
-//       },
-//     });
-
-//     // Generate booking link
-//     const bookingLink = generateBookingLink(service.id, req.user.role);
-
-//     const updatedService = await prisma.service.update({
-//       where: { id: service.id },
-//       data: { bookingLink },
-//       include: {
-//         provider: {
-//           select: { id: true, name: true, email: true, avatar: true },
-//         },
-//       },
-//     });
-
-//     return transformServiceUrls(updatedService);
-//   } catch (error) {
-//     console.error("Error creating service:", error);
-//     throw {
-//       statusCode: 400,
-//       message: `Failed to create service: ${error.message}`,
-//     };
-//   }
-// }
-// export async function updateService(
-
-//   serviceId,
-//   updateData,
-//   userId,
-//   userRole,
-//   logoPath = null
-// ) {
-//   const service = await prisma.service.findUnique({
-//     where: { id: serviceId },
-//   });
-
-//   if (!service) {
-//     throw { statusCode: 404, message: "Service not found" };
-//   }
-
-//   if (userRole !== "ADMIN" && userRole !== "COACH" && userRole !== 'PROVIDER' && service.providerId !== userId) {
-//     throw {
-//       statusCode: 403,
-//       message: "Not authorized to update this service",
-//     };
-//   }
-
-//   const data = { ...updateData };
-
-//   // Clean the data similar to create
-//   if (data.duration !== undefined) {
-//     const durationNum = parseInt(data.duration);
-//     data.duration = !isNaN(durationNum) ? durationNum : undefined;
-//   }
-
-//   // Handle array fields
-//   const arrayFields = ['sports', 'sessionTypes', 'suitableFor', 'providerType', 'availableDays'];
-//   arrayFields.forEach(field => {
-//     if (data[field] && typeof data[field] === 'string') {
-//       data[field] = data[field].split(',').map(s => s.trim());
-//     }
-//   });
-
-//   // Handle boolean fields
-//   const booleanFields = ['insuranceInPlace', 'isOnline', 'womenOnly'];
-//   booleanFields.forEach(field => {
-//     if (data[field] !== undefined) {
-//       data[field] = data[field] === true || data[field] === "true";
-//     }
-//   });
-
-//   if (logoPath) {
-//     data.logo = logoPath;
-//   }
-
-//   // rebuild fullAddress
-//   if (data.addressLine1 || data.city || data.postcode) {
-//     data.fullAddress = [
-//       data.addressLine1 || service.addressLine1,
-//       data.city || service.city,
-//       data.postcode || service.postcode,
-//     ]
-//       .filter(Boolean)
-//       .join(", ");
-//   }
-
-//   const updatedService = await prisma.service.update({
-//     where: { id: serviceId },
-//     data,
-//     include: {
-//       provider: {
-//         select: { id: true, name: true, email: true, avatar: true },
-//       },
-//     },
-//   });
-
-//   return transformServiceUrls(updatedService);
-// }
 export async function createService(serviceData, req, logoPath = null) {
   // Clean and prepare the data
   const preparedData = { ...serviceData };
+
+  console.log('prepare data', preparedData)
 
   // Handle duration - ensure it's a valid number
   if (preparedData.duration !== undefined && preparedData.duration !== null && preparedData.duration !== '') {
@@ -1160,6 +988,7 @@ export async function createService(serviceData, req, logoPath = null) {
   ].filter(Boolean).join(", ");
 
   try {
+
     const service = await prisma.service.create({
       data: {
         ...preparedData,
@@ -1172,15 +1001,14 @@ export async function createService(serviceData, req, logoPath = null) {
         providerEmail: req.user.email || "",
         status: "PENDING",
         isApproved: false,
+        // Use bookingLink from preparedData or set to null
+        bookingLink: preparedData.bookingLink || null,
       },
     });
 
-    // Generate booking link
-    const bookingLink = generateBookingLink(service.id, req.user.role);
 
-    const updatedService = await prisma.service.update({
+    const createdService = await prisma.service.findUnique({
       where: { id: service.id },
-      data: { bookingLink },
       include: {
         provider: {
           select: { id: true, name: true, email: true, avatar: true },
@@ -1188,7 +1016,7 @@ export async function createService(serviceData, req, logoPath = null) {
       },
     });
 
-    return transformServiceUrls(updatedService);
+    return transformServiceUrls(createdService);
   } catch (error) {
     console.error("Error creating service:", error);
     throw {
@@ -1197,6 +1025,119 @@ export async function createService(serviceData, req, logoPath = null) {
     };
   }
 }
+
+// export async function createService(serviceData, req, logoPath = null) {
+//   // Clean and prepare the data
+//   const preparedData = { ...serviceData };
+
+//   // Handle duration - ensure it's a valid number
+//   if (preparedData.duration !== undefined && preparedData.duration !== null && preparedData.duration !== '') {
+//     const durationNum = parseInt(preparedData.duration);
+//     if (!isNaN(durationNum)) {
+//       preparedData.duration = durationNum;
+//     } else {
+//       delete preparedData.duration;
+//     }
+//   }
+
+//   // Ensure providerType is an array
+//   if (preparedData.providerType && !Array.isArray(preparedData.providerType)) {
+//     preparedData.providerType = [preparedData.providerType];
+//   }
+
+//   // Ensure sessionTypes is an array
+//   if (preparedData.sessionTypes && !Array.isArray(preparedData.sessionTypes)) {
+//     preparedData.sessionTypes = preparedData.sessionTypes.split(',').map(s => s.trim());
+//   }
+
+//   // Ensure suitableFor is an array
+//   if (preparedData.suitableFor && !Array.isArray(preparedData.suitableFor)) {
+//     preparedData.suitableFor = preparedData.suitableFor.split(',').map(s => s.trim());
+//   }
+
+//   // Ensure sports is an array
+//   if (preparedData.sports && !Array.isArray(preparedData.sports)) {
+//     preparedData.sports = preparedData.sports.split(',').map(s => s.trim());
+//   }
+
+//   // Ensure availableDays is an array
+//   if (preparedData.availableDays && !Array.isArray(preparedData.availableDays)) {
+//     preparedData.availableDays = preparedData.availableDays.split(',').map(s => s.trim());
+//   }
+
+//   // NEW: Handle the new fields - ensure they're strings
+//   if (preparedData.whoCanTakePart !== undefined) {
+//     preparedData.whoCanTakePart = String(preparedData.whoCanTakePart).trim();
+//   }
+
+//   if (preparedData.startTime !== undefined) {
+//     preparedData.startTime = String(preparedData.startTime).trim();
+//   }
+
+//   if (preparedData.endTime !== undefined) {
+//     preparedData.endTime = String(preparedData.endTime).trim();
+//   }
+
+//   // Handle field name typos - map sessionDay, timeSlot if they come as sessonDay or timeSlote
+//   if (preparedData.sessonDay) {
+//     preparedData.sessonDay = preparedData.sessonDay;
+//   }
+
+//   if (preparedData.timeSlote) {
+//     preparedData.timeSlote = preparedData.timeSlote;
+//   }
+
+//   if (preparedData.costMemebershipDetail) {
+//     preparedData.costMemebershipDetail = preparedData.costMemebershipDetail.trim();
+//   }
+
+//   preparedData.responseType = preparedData.responseType || "INTERESTED";
+
+//   // Build full address
+//   const fullAddress = [
+//     preparedData.addressLine1,
+//     preparedData.city,
+//     preparedData.postcode
+//   ].filter(Boolean).join(", ");
+
+//   try {
+//     const service = await prisma.service.create({
+//       data: {
+//         ...preparedData,
+//         fullAddress: fullAddress || null,
+//         logo: logoPath || null,
+//         providerId: req.user.id,
+//         providerName: req.user.name || "Unknown",
+//         contactName: req.user.name || null,
+//         providerPhone: req.user.phone || "",
+//         providerEmail: req.user.email || "",
+//         status: "PENDING",
+//         isApproved: false,
+//       },
+//     });
+
+//     // Generate booking link
+//     const bookingLink = generateBookingLink(service.id, req.user.role);
+
+//     const updatedService = await prisma.service.update({
+//       where: { id: service.id },
+//       data: { bookingLink },
+//       include: {
+//         provider: {
+//           select: { id: true, name: true, email: true, avatar: true },
+//         },
+//       },
+//     });
+
+//     return transformServiceUrls(updatedService);
+//   } catch (error) {
+//     console.error("Error creating service:", error);
+//     throw {
+//       statusCode: 400,
+//       message: `Failed to create service: ${error.message}`,
+//     };
+//   }
+// }
 export async function updateService(
   serviceId,
   updateData,

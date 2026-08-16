@@ -65,6 +65,25 @@ const optionalNumber = z.preprocess(
   z.number().optional()
 );
 
+const bookingLinkSchema = z.preprocess(
+  (val) => {
+    if (val === null || val === "" || val === undefined) return undefined;
+
+    // Handle array case
+    if (Array.isArray(val)) {
+      // If empty array, return undefined
+      if (val.length === 0) return undefined;
+      // Take first element if it's a string
+      if (typeof val[0] === 'string') {
+        return val[0].trim();
+      }
+      return undefined;
+    }
+
+    return typeof val === 'string' ? val.trim() : undefined;
+  },
+  z.string().optional()
+);
 const responseTypeEnum = z.enum([
   "INTERESTED",
   "REGISTER",
@@ -104,7 +123,7 @@ export const createServiceSchema = z.object({
     ])
     .optional(),
 
-  bookingLink: optionalString,
+  bookingLink: bookingLinkSchema,
 
   logo: optionalString,
 

@@ -172,8 +172,6 @@ async function runEventStatusUpdate() {
                 });
 
                 updatedCount += 1;
-            } else {
-                console.log(`  Status unchanged: ${event.status}`);
             }
         }
 
