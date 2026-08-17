@@ -42,12 +42,13 @@ export async function getServiceById(req, res) {
     const { id } = req.params;
     const shouldTrackView =
       !req.user || (req.user.role !== "ADMIN" && req.user.role !== "PROVIDER");
-    const service = await serviceService.getServiceById(id, shouldTrackView);
-    // if (!service.isApproved) {
-    //   if (!req.user) return sendError(res, 403, "Service is pending approval");
-    //   if (req.user.role !== "ADMIN" && service.providerId !== req.user.id)
-    //     return sendError(res, 403, "Service is pending approval");
-    // }
+    const shouldTrackBookingLink =
+      req.query.trackBookingLink === "true" || req.query.trackBookingLink === "1";
+    const service = await serviceService.getServiceById(
+      id,
+      shouldTrackView,
+      shouldTrackBookingLink
+    );
     return sendSuccess(res, 200, "Service retrieved successfully", { service });
   } catch (error) {
     return sendError(res, error.statusCode || 500, error.message);

@@ -20,15 +20,26 @@ function getFullImageUrl(imagePath) {
 }
 
 
+function getAnalyticsRecord(analytics) {
+  if (!analytics) return null;
+  return Array.isArray(analytics) ? analytics[0] : analytics;
+}
+
+function getBookingLinkClicks(analytics) {
+  return getAnalyticsRecord(analytics)?.bookingLinkClicks || 0;
+}
+
 function transformServiceUrls(service) {
   if (!service) return service;
+  const bookingLink =
+    service.bookingLink && !service.bookingLink.startsWith("http")
+      ? `${config.backendUrl}${service.bookingLink}`
+      : service.bookingLink;
   return {
     ...service,
     image: getFullImageUrl(service.image),
-    bookingLink:
-      service.bookingLink && !service.bookingLink.startsWith("http")
-        ? `${config.backendUrl}${service.bookingLink}`
-        : service.bookingLink,
+    bookingLink,
+    bookingLinkClicks: getBookingLinkClicks(service.analytics),
   };
 }
 
@@ -185,6 +196,7 @@ export async function getAllServices(query = {}) {
         select: {
           id: true,
           views: true,
+          bookingLinkClicks: true,
           bookings: true,
           revenue: true,
           rating: true,
@@ -289,8 +301,9 @@ export async function getAllServices(query = {}) {
 
   // Transform each service with full data
   const transformedServices = servicesWithAllRelations.map(service => {
-    const analyticsSummary = service.analytics || {
+    const analyticsSummary = getAnalyticsRecord(service.analytics) || {
       views: 0,
+      bookingLinkClicks: 0,
       bookings: 0,
       revenue: 0,
       rating: 0,
@@ -319,8 +332,10 @@ export async function getAllServices(query = {}) {
     return {
       ...service,
       analytics: analyticsSummary,
+      bookingLinkClicks: analyticsSummary.bookingLinkClicks || 0,
       stats: {
         views: analyticsSummary.views,
+        bookingLinkClicks: analyticsSummary.bookingLinkClicks || 0,
         totalRevenue: analyticsSummary.revenue,
         averageRating: analyticsSummary.rating,
         totalBookings,
@@ -514,6 +529,7 @@ export async function getServicesByProviderRole(query = {}) {
         analytics: {
           select: {
             views: true,
+            bookingLinkClicks: true,
             bookings: true,
             revenue: true,
             rating: true,
@@ -629,9 +645,10 @@ export async function getServicesByProviderRole(query = {}) {
     return {
       ...transformed,
       stats: {
-        views: service.analytics?.views || 0,
-        totalRevenue: service.analytics?.revenue || 0,
-        averageRating: service.analytics?.rating || 0,
+        views: getAnalyticsRecord(service.analytics)?.views || 0,
+        bookingLinkClicks: getBookingLinkClicks(service.analytics),
+        totalRevenue: getAnalyticsRecord(service.analytics)?.revenue || 0,
+        averageRating: getAnalyticsRecord(service.analytics)?.rating || 0,
         totalBookings: totalBookings,
         pendingBookings: pendingBookings,
         confirmedBookings: confirmedBookings,
@@ -663,7 +680,7 @@ export async function getServicesByProviderRole(query = {}) {
   };
 }
 
-export async function getServiceById(serviceId, trackView = true) {
+export async function getServiceById(serviceId, trackView = true, trackBookingLink = false) {
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
     include: {
@@ -763,6 +780,16 @@ export async function getServiceById(serviceId, trackView = true) {
 
   if (!service) throw { statusCode: 404, message: "Service not found" };
   if (trackView && service.isApproved) await trackServiceView(serviceId);
+  if (trackBookingLink && service.bookingLink) {
+    const clickResult = await trackServiceBookingLinkClick(serviceId);
+    if (Array.isArray(service.analytics) && service.analytics[0]) {
+      service.analytics[0].bookingLinkClicks = clickResult.bookingLinkClicks;
+    } else if (service.analytics && !Array.isArray(service.analytics)) {
+      service.analytics.bookingLinkClicks = clickResult.bookingLinkClicks;
+    } else {
+      service.analytics = [{ bookingLinkClicks: clickResult.bookingLinkClicks }];
+    }
+  }
 
   const transformed = transformServiceUrls(service);
 
@@ -771,13 +798,15 @@ export async function getServiceById(serviceId, trackView = true) {
   const unreadReplies = service.messages?.reduce((total, msg) => {
     return total + (msg.replies?.filter(reply => !reply.isRead).length || 0);
   }, 0) || 0;
+  const analyticsRecord = getAnalyticsRecord(service.analytics);
 
   return {
     ...transformed,
     stats: {
-      views: service.analytics?.views || 0,
-      totalRevenue: service.analytics?.revenue || 0,
-      averageRating: service.analytics?.rating || 0,
+      views: analyticsRecord?.views || 0,
+      bookingLinkClicks: analyticsRecord?.bookingLinkClicks || 0,
+      totalRevenue: analyticsRecord?.revenue || 0,
+      averageRating: analyticsRecord?.rating || 0,
       totalBookings: service._count?.bookings || 0,
       totalMessages: service._count?.messages || 0,
       unreadMessages: unreadMessages + unreadReplies,
@@ -811,6 +840,7 @@ export async function getProviderServices(providerId, filters = {}) {
         analytics: {
           select: {
             views: true,
+            bookingLinkClicks: true,
             bookings: true,
             revenue: true,
             rating: true
@@ -889,8 +919,9 @@ export async function getProviderServices(providerId, filters = {}) {
     return {
       ...transformed,
       stats: {
-        views: service.analytics?.views || 0,
-        revenue: service.analytics?.revenue || 0,
+        views: getAnalyticsRecord(service.analytics)?.views || 0,
+        bookingLinkClicks: getBookingLinkClicks(service.analytics),
+        revenue: getAnalyticsRecord(service.analytics)?.revenue || 0,
         rating: service.analytics?.rating || 0,
         totalBookings: service._count?.bookings || 0,
         totalMessages: service._count?.messages || 0,
@@ -1248,7 +1279,7 @@ export async function getAdminServices(filters = {}) {
         provider: {
           select: { id: true, name: true, email: true, avatar: true },
         },
-        analytics: { select: { views: true, bookings: true, revenue: true } },
+        analytics: { select: { views: true, bookingLinkClicks: true, bookings: true, revenue: true } },
         _count: { select: { bookings: true, messages: true } },
       },
       skip: (page - 1) * parseInt(limit),
@@ -1993,6 +2024,46 @@ export async function updateBookingStatus(bookingId, status, userId, userRole) {
   return updatedBooking;
 }
 
+
+export async function trackServiceBookingLinkClick(serviceId) {
+  const service = await prisma.service.findUnique({
+    where: { id: serviceId },
+    select: { id: true, bookingLink: true },
+  });
+
+  if (!service) {
+    throw { statusCode: 404, message: "Service not found" };
+  }
+
+  if (!service.bookingLink) {
+    throw { statusCode: 404, message: "Booking link not found for this service" };
+  }
+
+  try {
+    const analytics = await ensureAnalytics(serviceId);
+    const updated = await prisma.serviceAnalytics.update({
+      where: { id: analytics.id },
+      data: { bookingLinkClicks: { increment: 1 } },
+    });
+
+    const destinationUrl =
+      service.bookingLink.startsWith("http://") ||
+        service.bookingLink.startsWith("https://")
+        ? service.bookingLink
+        : `${config.backendUrl}${service.bookingLink}`;
+
+    return {
+      bookingLink: destinationUrl,
+      bookingLinkClicks: updated.bookingLinkClicks,
+    };
+  } catch (err) {
+    console.error("trackServiceBookingLinkClick error:", err.message);
+    throw {
+      statusCode: 500,
+      message: "Failed to track booking link click",
+    };
+  }
+}
 
 export async function trackServiceView(serviceId) {
   try {
