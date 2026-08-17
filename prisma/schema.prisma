@@ -378,6 +378,7 @@ model Service {
     // Participant response
     participantResponseType  String        @default("BY_DEFAULT")
     bookingLink              String?
+    shareLink                String?
     // Status & approval
     status                   ServiceStatus @default(PENDING)
     isApproved               Boolean       @default(false)

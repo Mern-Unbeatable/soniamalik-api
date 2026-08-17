@@ -7,7 +7,7 @@ import * as  notificationService from "./notification.service.js";
 
 
 
-function generateBookingLink(serviceId, role) {
+function generateSharingLink(serviceId, role) {
   const basePath = role === "COACH" ? "discover" : "services";
   return `${config.frontendUrl}/${basePath}/${serviceId}`;
 }
@@ -39,6 +39,9 @@ function transformServiceUrls(service) {
     ...service,
     image: getFullImageUrl(service.image),
     bookingLink,
+    shareLink:
+      service.shareLink ||
+      generateSharingLink(service.id, service.provider?.role),
     bookingLinkClicks: getBookingLinkClicks(service.analytics),
   };
 }
@@ -1010,6 +1013,7 @@ export async function createService(serviceData, req, logoPath = null) {
   }
 
   preparedData.responseType = preparedData.responseType || "INTERESTED";
+  delete preparedData.shareLink;
 
   // Build full address
   const fullAddress = [
@@ -1037,17 +1041,35 @@ export async function createService(serviceData, req, logoPath = null) {
       },
     });
 
-
     const createdService = await prisma.service.findUnique({
       where: { id: service.id },
       include: {
         provider: {
-          select: { id: true, name: true, email: true, avatar: true },
+          select: { id: true, name: true, email: true, avatar: true, role: true },
         },
       },
     });
 
-    return transformServiceUrls(createdService);
+    const shareLink = generateSharingLink(service.id, req.user.role);
+
+    try {
+      const savedService = await prisma.service.update({
+        where: { id: service.id },
+        data: { shareLink },
+        include: {
+          provider: {
+            select: { id: true, name: true, email: true, avatar: true, role: true },
+          },
+        },
+      });
+      return transformServiceUrls(savedService);
+    } catch (saveShareLinkError) {
+      console.error("shareLink save skipped:", saveShareLinkError.message);
+      return transformServiceUrls({
+        ...createdService,
+        shareLink,
+      });
+    }
   } catch (error) {
     console.error("Error creating service:", error);
     throw {
@@ -1192,6 +1214,7 @@ export async function updateService(
   }
 
   const data = { ...updateData };
+  delete data.shareLink;
 
   // Clean the data similar to create
   if (data.duration !== undefined) {
@@ -1243,7 +1266,7 @@ export async function updateService(
     data,
     include: {
       provider: {
-        select: { id: true, name: true, email: true, avatar: true },
+        select: { id: true, name: true, email: true, avatar: true, role: true },
       },
     },
   });
