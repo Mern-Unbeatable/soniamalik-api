@@ -91,6 +91,7 @@ const responseTypeEnum = z.enum([
 export const createServiceSchema = z.object({
   listingHeadline: optionalString,
   aboutService: optionalString,
+  frequency: optionalString,
 
   providerName: optionalString,
   contactName: optionalString,

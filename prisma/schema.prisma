@@ -347,28 +347,28 @@ enum ServiceType {
 }
 
 model Service {
-    id              String   @id @default(uuid())
+    id                       String        @id @default(uuid())
     // Core listing info
-    listingHeadline String?
-    aboutService    String?  @db.Text
+    listingHeadline          String?
+    aboutService             String?       @db.Text
     // Provider info
-    providerName    String
-    contactName     String?
-    providerPhone   String
-    providerEmail   String
-    providerId      String
-    provider        User     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+    providerName             String
+    contactName              String?
+    providerPhone            String
+    providerEmail            String
+    providerId               String
+    provider                 User          @relation(fields: [providerId], references: [id], onDelete: Cascade)
     // Provider type / profession
-    providerType    String[] @default([])
-    clinicName      String?
-    addressLine1    String?
-    city            String?
-    postcode        String?
-    location        String?
-    googleMapLink   String?
-    fullAddress     String?
+    providerType             String[]      @default([])
+    clinicName               String?
+    addressLine1             String?
+    city                     String?
+    postcode                 String?
+    location                 String?
+    googleMapLink            String?
+    fullAddress              String?
     // Session info
-
+    frequency                String?
     sports                   String[]      @default([])
     isOnline                 Boolean       @default(false)
     // Credentials
