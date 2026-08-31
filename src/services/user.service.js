@@ -232,17 +232,54 @@ export async function getUserById(userId) {
 }
 
 export async function updateUser(userId, updateData) {
-  const { name, phone, bio, address, avatar, password, image, postcode } = updateData;
+  const {
+    name,
+    phone,
+    bio,
+    address,
+    avatar,
+    password,
+    image,
+    postcode,
+    organizationName,
+    organisationName,
+    providerBusinessName,
+    aboutOrganization,
+    sessionType,
+    sportsOffered,
+    serviceTypes,
+  } = updateData;
 
   const data = {};
+  const orgName = organizationName ?? organisationName ?? providerBusinessName ?? null;
 
   if (name) data.name = name;
-  if (phone) data.phone = phone;
-  if (bio) data.bio = bio;
-  if (address) data.address = address;
-  if (postcode) data.postcode = postcode;
+  if (phone !== undefined) data.phone = phone;
+  if (bio !== undefined) data.bio = bio;
+  if (address !== undefined) data.address = address;
+  if (postcode !== undefined) data.postcode = postcode;
   if (avatar) data.avatar = avatar;
   if (image) data.avatar = image;
+
+  if (orgName !== null && orgName !== undefined) {
+    data.organizationName = orgName;
+  }
+
+  if (aboutOrganization !== undefined) {
+    data.aboutOrganization = aboutOrganization;
+  }
+
+  if (sessionType !== undefined) {
+    data.sessionType = sessionType;
+  }
+
+  if (sportsOffered !== undefined) {
+    data.sportsOffered = sportsOffered;
+  }
+
+  if (serviceTypes !== undefined) {
+    data.serviceTypes = serviceTypes;
+  }
 
   if (password) {
     data.password = await hashPassword(password);
@@ -261,7 +298,12 @@ export async function updateUser(userId, updateData) {
       phone: true,
       bio: true,
       address: true,
-      postcode: true, // Add this line to return postcode
+      postcode: true,
+      organizationName: true,
+      aboutOrganization: true,
+      sessionType: true,
+      sportsOffered: true,
+      serviceTypes: true,
       updatedAt: true,
     },
   });
