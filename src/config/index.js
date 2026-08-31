@@ -1,6 +1,12 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "../..");
+
+dotenv.config({ path: path.join(projectRoot, ".env") });
 
 export const config = {
   // Server
@@ -42,6 +48,7 @@ const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET"];
 requiredEnvVars.forEach((envVar) => {
   if (!process.env[envVar]) {
     console.error(`❌ Missing required environment variable: ${envVar}`);
+    console.error(`Expected .env file at: ${path.join(projectRoot, ".env")}`);
     process.exit(1);
   }
 });
