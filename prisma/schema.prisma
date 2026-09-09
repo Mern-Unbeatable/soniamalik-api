@@ -148,6 +148,10 @@ model Event {
     skillLevel          Json?
     registrationFee     Decimal?            @default(0) @db.Decimal(10, 2)
     costType            String              @default("free")
+    costDetails         String?             @db.Text
+    addressLine1        String?
+    womenOnly           Boolean?
+    whoCanTakePart      String?
     image               String?
     organizerName       String
     organizerPhone      String?

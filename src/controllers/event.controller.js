@@ -63,13 +63,28 @@ export const createEvent = catchAsync(async (req, res) => {
     endDate: new Date(req.body.endDate),
     minAge: req.body.minAge ? Number(req.body.minAge) : null,
     maxParticipants: req.body.maxParticipants ? Number(req.body.maxParticipants) : null,
-    registrationFee: req.body.registrationFee ? Number(req.body.registrationFee) : 0,
+    registrationFee:
+      req.body.registrationFee !== undefined && req.body.registrationFee !== null
+        ? Number(req.body.registrationFee)
+        : 0,
+    costDetails: req.body.costDetails ?? null,
+    addressLine1: req.body.addressLine1 ?? null,
+    womenOnly:
+      req.body.womenOnly !== undefined
+        ? Boolean(req.body.womenOnly)
+        : req.body.womensOnly !== undefined
+          ? Boolean(req.body.womensOnly)
+          : null,
+    whoCanTakePart: req.body.whoCanTakePart ?? null,
     image: req.body.image || null,
     organizerName: req.user.name,
     organizerPhone: req.user.phone,
     organizerEmail: req.user.email,
     responseType: req.body.responseType || "INTERESTED",
   };
+
+  delete eventData.womensOnly;
+  delete eventData.price;
 
   const event = await eventService.createEvent(eventData, req.user.id);
 
@@ -97,11 +112,16 @@ export async function updateEvent(req, res) {
       "venueName",
       "city",
       "fullAddress",
+      "addressLine1",
       "googleMapLink",
       "minAge",
       "maxParticipants",
       "skillLevel",
       "registrationFee",
+      "costType",
+      "costDetails",
+      "womenOnly",
+      "whoCanTakePart",
       "organizerName",
       "organizerPhone",
       "organizerEmail",
@@ -120,11 +140,29 @@ export async function updateEvent(req, res) {
             : null;
         } else if (field === "registrationFee") {
           updateData[field] = parseFloat(req.body[field]);
+        } else if (field === "womenOnly") {
+          updateData[field] = Boolean(req.body[field]);
         } else {
           updateData[field] = req.body[field];
         }
       }
     });
+
+    if (req.body.womensOnly !== undefined && updateData.womenOnly === undefined) {
+      updateData.womenOnly = Boolean(req.body.womensOnly);
+    }
+    if (
+      updateData.whoCanTakePart === undefined &&
+      updateData.womenOnly !== undefined
+    ) {
+      updateData.whoCanTakePart = updateData.womenOnly
+        ? "Women only"
+        : "Mixed, women welcome";
+    }
+    if (updateData.costType === "free") {
+      updateData.costDetails = null;
+      updateData.registrationFee = 0;
+    }
 
     // Validate dates if both are being updated or one is being changed
     if (updateData.startDate || updateData.endDate) {

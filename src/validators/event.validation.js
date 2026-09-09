@@ -327,18 +327,57 @@ export const createEventSchema = z
       (val) => {
         if (val === null || val === "" || val === undefined) return 0;
         const num = Number(val);
-        return isNaN(num) ? 0 : num;
+        if (!isNaN(num)) return num;
+        // Allow free-text prices like "£10 per person" — numeric fee falls back to 0
+        const extracted = String(val).replace(/[^0-9.]/g, "");
+        const parsed = Number(extracted);
+        return isNaN(parsed) ? 0 : parsed;
       },
       z.number().min(0, "Registration fee cannot be negative")
     ),
 
     costType: z.enum(["free", "paid"]).optional(),
+    costDetails: z.string().optional().nullable(),
+    addressLine1: z.string().optional().nullable(),
+    whoCanTakePart: z.string().optional().nullable(),
+    womenOnly: z.preprocess((val) => {
+      if (val === undefined || val === null || val === "") return undefined;
+      if (typeof val === "boolean") return val;
+      const normalized = String(val).trim().toLowerCase();
+      if (["true", "1", "yes"].includes(normalized)) return true;
+      if (["false", "0", "no"].includes(normalized)) return false;
+      return undefined;
+    }, z.boolean().optional()),
+    womensOnly: z.preprocess((val) => {
+      if (val === undefined || val === null || val === "") return undefined;
+      if (typeof val === "boolean") return val;
+      const normalized = String(val).trim().toLowerCase();
+      if (["true", "1", "yes"].includes(normalized)) return true;
+      if (["false", "0", "no"].includes(normalized)) return false;
+      return undefined;
+    }, z.boolean().optional()),
 
     image: z.string().optional(),
 
     currentParticipants: optionalNumber,
     responseMethods: z.array(z.string()).optional(),
     suitableFor: z.array(z.string()).optional(),
+  })
+  .transform((data) => {
+    const { womensOnly, ...rest } = data;
+    if (rest.womenOnly === undefined && womensOnly !== undefined) {
+      rest.womenOnly = womensOnly;
+    }
+    if (!rest.whoCanTakePart && rest.womenOnly !== undefined) {
+      rest.whoCanTakePart = rest.womenOnly
+        ? "Women only"
+        : "Mixed, women welcome";
+    }
+    if (rest.costType === "free") {
+      rest.costDetails = null;
+      rest.registrationFee = 0;
+    }
+    return rest;
   })
 
   // Cross-field validation: End date must be after or equal to start date
@@ -468,18 +507,61 @@ export const updateEventSchema = z
       (val) => {
         if (val === null || val === "" || val === undefined) return undefined;
         const num = Number(val);
-        return isNaN(num) ? undefined : num;
+        if (!isNaN(num)) return num;
+        const extracted = String(val).replace(/[^0-9.]/g, "");
+        const parsed = Number(extracted);
+        return isNaN(parsed) ? undefined : parsed;
       },
       z.number().min(0, "Registration fee cannot be negative").optional()
     ),
 
     costType: z.enum(["free", "paid"]).optional(),
+    costDetails: z.string().optional().nullable(),
+    addressLine1: z.string().optional().nullable(),
+    whoCanTakePart: z.string().optional().nullable(),
+    womenOnly: z.preprocess((val) => {
+      if (val === undefined || val === null || val === "") return undefined;
+      if (typeof val === "boolean") return val;
+      const normalized = String(val).trim().toLowerCase();
+      if (["true", "1", "yes"].includes(normalized)) return true;
+      if (["false", "0", "no"].includes(normalized)) return false;
+      return undefined;
+    }, z.boolean().optional()),
+    womensOnly: z.preprocess((val) => {
+      if (val === undefined || val === null || val === "") return undefined;
+      if (typeof val === "boolean") return val;
+      const normalized = String(val).trim().toLowerCase();
+      if (["true", "1", "yes"].includes(normalized)) return true;
+      if (["false", "0", "no"].includes(normalized)) return false;
+      return undefined;
+    }, z.boolean().optional()),
 
     image: z.string().optional(),
 
     currentParticipants: optionalNumber,
     responseMethods: optionalStringArray,
     suitableFor: optionalStringArray,
+  })
+  .transform((data) => {
+    const { womensOnly, ...rest } = data;
+    if (rest.womenOnly === undefined && womensOnly !== undefined) {
+      rest.womenOnly = womensOnly;
+    }
+    if (
+      rest.whoCanTakePart === undefined &&
+      rest.womenOnly !== undefined
+    ) {
+      rest.whoCanTakePart = rest.womenOnly
+        ? "Women only"
+        : "Mixed, women welcome";
+    }
+    if (rest.costType === "free") {
+      rest.costDetails = null;
+      if (rest.registrationFee === undefined) {
+        rest.registrationFee = 0;
+      }
+    }
+    return rest;
   })
 
   .refine(

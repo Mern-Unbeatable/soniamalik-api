@@ -432,6 +432,27 @@ export async function createEvent(eventData, organizerId) {
 
     delete preparedData.organizerId;
     delete preparedData.organizer;
+    delete preparedData.womensOnly;
+    delete preparedData.price;
+    delete preparedData.organizationName;
+    delete preparedData.contactName;
+    delete preparedData.role;
+    delete preparedData.orgLogo;
+
+    if (preparedData.costType === "free") {
+      preparedData.registrationFee = 0;
+      preparedData.costDetails = null;
+    }
+
+    if (
+      preparedData.whoCanTakePart == null &&
+      preparedData.womenOnly !== undefined &&
+      preparedData.womenOnly !== null
+    ) {
+      preparedData.whoCanTakePart = preparedData.womenOnly
+        ? "Women only"
+        : "Mixed, women welcome";
+    }
 
     const arrayFields = ["responseMethods", "suitableFor"];
     arrayFields.forEach((field) => {
@@ -488,6 +509,7 @@ export async function createEvent(eventData, organizerId) {
 
     if (preparedData.costType === "free") {
       preparedData.registrationFee = 0;
+      preparedData.costDetails = null;
     }
 
     if (!preparedData.currentParticipants) {
