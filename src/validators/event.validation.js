@@ -7,6 +7,21 @@ const optionalString = z.preprocess(
   },
   z.string().optional()
 );
+
+/** Empty → null; if provided, must be at least 2 characters. Missing → undefined. */
+const optionalVenueName = z.preprocess(
+  (val) => {
+    if (val === undefined) return undefined;
+    if (val === null) return null;
+    const trimmed = String(val).trim();
+    return trimmed === "" ? null : trimmed;
+  },
+  z
+    .string()
+    .min(2, "Venue name must be at least 2 characters")
+    .nullable()
+    .optional()
+);
 const jsonSchema = z.lazy(() =>
   z.union([
     z.string(),
@@ -283,11 +298,7 @@ export const createEventSchema = z
 
     responseType: responseTypeEnum.optional(),
 
-    venueName: z
-      .string({
-        required_error: "Venue name is required",
-      })
-      .min(2, "Venue name must be at least 2 characters"),
+    venueName: optionalVenueName,
     postCode: z
       .string().optional(),
     city: z
@@ -469,7 +480,7 @@ export const updateEventSchema = z
 
     responseType: responseTypeEnum.optional(),
 
-    venueName: z.string().min(2, "Venue name must be at least 2 characters").optional(),
+    venueName: optionalVenueName,
     postCode: z
       .string().optional()
     ,
