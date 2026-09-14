@@ -140,6 +140,51 @@ export const uploadMultipleImages = (
   };
 };
 
+/** Upload listing cover (`image`) and organisation logo (`logo`) for services.
+ * Uses .any() so older clients that only send `logo` (or aliases) do not hit
+ * Multer's "Unexpected field" error.
+ */
+export const uploadServiceImages = (folderName = "services") => {
+  return (req, res, next) => {
+    const upload = createUpload(folderName);
+
+    upload.any()(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({
+            success: false,
+            message: "File too large. Maximum size is 10MB",
+          });
+        }
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      } else if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+
+      const files = Array.isArray(req.files) ? req.files : [];
+      const byName = {};
+      for (const file of files) {
+        if (!byName[file.fieldname]) byName[file.fieldname] = [];
+        byName[file.fieldname].push(file);
+      }
+
+      // Normalize to the shape controllers already expect from upload.fields()
+      req.files = {
+        image: byName.image || byName.listingImage || byName.listing_image || [],
+        logo: byName.logo || byName.orgLogo || byName.organisationLogo || [],
+      };
+
+      next();
+    });
+  };
+};
+
 // Middleware to handle multiple different image fields for homepage sections
 export const uploadHomepageImages = (folderName = "homepage") => {
   return (req, res, next) => {

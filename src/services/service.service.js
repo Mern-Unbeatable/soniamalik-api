@@ -1079,9 +1079,20 @@ export async function getProviderServices(providerId, filters = {}) {
 //   }
 // }
 
-export async function createService(serviceData, req, logoPath = null) {
+export async function createService(serviceData, req, logoPath = null, imagePath = null) {
   // Clean and prepare the data
+  const incomingLogoUrl =
+    (typeof serviceData?.logoUrl === "string" && serviceData.logoUrl.trim()
+      ? serviceData.logoUrl.trim()
+      : null) ||
+    (typeof serviceData?.logo === "string" && serviceData.logo.trim()
+      ? serviceData.logo.trim()
+      : null);
+
   const preparedData = { ...serviceData };
+  delete preparedData.logo;
+  delete preparedData.image;
+  delete preparedData.logoUrl;
 
   console.log('prepare data', preparedData);
 
@@ -1165,12 +1176,32 @@ export async function createService(serviceData, req, logoPath = null) {
     preparedData.postcode
   ].filter(Boolean).join(", ");
 
+  // Resolve listing cover vs organisation logo
+  // - Dual upload: image file = cover, logo file/url = org logo
+  // - Single-file clients: logo file = cover, logoUrl text = org logo
+  let finalImage = imagePath || null;
+  let finalLogo = null;
+
+  if (imagePath) {
+    finalImage = imagePath;
+    finalLogo = logoPath || incomingLogoUrl || null;
+  } else if (logoPath && incomingLogoUrl) {
+    finalImage = logoPath;
+    finalLogo = incomingLogoUrl;
+  } else if (logoPath) {
+    finalImage = logoPath;
+    finalLogo = null;
+  } else if (incomingLogoUrl) {
+    finalLogo = incomingLogoUrl;
+  }
+
   try {
     const service = await prisma.service.create({
       data: {
         ...preparedData,
         fullAddress: fullAddress || null,
-        logo: logoPath || null,
+        image: finalImage,
+        logo: finalLogo,
         providerId: req.user.id,
         providerName: req.user.name || "Unknown",
         contactName: req.user.name || null,
@@ -1227,7 +1258,8 @@ export async function updateService(
   updateData,
   userId,
   userRole,
-  logoPath = null
+  logoPath = null,
+  imagePath = null
 ) {
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
@@ -1246,6 +1278,17 @@ export async function updateService(
 
   const data = { ...updateData };
   delete data.shareLink;
+  const incomingLogoUrl =
+    (typeof updateData?.logoUrl === "string" && updateData.logoUrl.trim()
+      ? updateData.logoUrl.trim()
+      : null) ||
+    (typeof updateData?.logo === "string" && updateData.logo.trim()
+      ? updateData.logo.trim()
+      : null);
+  // File paths come from multipart uploads, not body strings
+  delete data.logo;
+  delete data.image;
+  delete data.logoUrl;
 
   // Clean the data similar to create
   if (data.duration !== undefined) {
@@ -1277,8 +1320,23 @@ export async function updateService(
     }
   });
 
-  if (logoPath) {
-    data.logo = logoPath;
+  if (imagePath) {
+    data.image = imagePath;
+    if (logoPath) {
+      data.logo = logoPath;
+    } else if (incomingLogoUrl) {
+      data.logo = incomingLogoUrl;
+    } else if (!service.image) {
+      // Legacy row: listing was in logo — clear so circle doesn't reuse cover
+      data.logo = null;
+    }
+  } else if (logoPath && incomingLogoUrl) {
+    data.image = logoPath;
+    data.logo = incomingLogoUrl;
+  } else if (logoPath) {
+    data.image = logoPath;
+  } else if (incomingLogoUrl) {
+    data.logo = incomingLogoUrl;
   }
 
   // rebuild fullAddress

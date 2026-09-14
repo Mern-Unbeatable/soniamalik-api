@@ -126,7 +126,10 @@ export const createServiceSchema = z.object({
 
   bookingLink: bookingLinkSchema,
 
+  image: optionalString,
   logo: optionalString,
+  /** Org / club logo URL when the file field `logo` is used for the listing cover */
+  logoUrl: optionalString,
 
   duration: optionalNumber,
   visibility: optionalString,
