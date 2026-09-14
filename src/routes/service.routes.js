@@ -3,7 +3,7 @@ import { body, param } from "express-validator";
 import { authenticate, authorize, optionalAuth } from "../middlewares/auth.js";
 import { asyncHandler } from "../middlewares/errorHandler.js";
 import { validate } from "../middlewares/validate.js";
-import { uploadSingleImage } from "../middlewares/upload.js";
+import { uploadServiceImages } from "../middlewares/upload.js";
 import * as serviceController from "../controllers/service.controller.js";
 
 import { validateZod } from "../middlewares/validateZod.js";
@@ -174,7 +174,7 @@ router.post(
   "/",
   authenticate,
   authorize("PROVIDER", "ADMIN", "COACH"),
-  uploadSingleImage("logo"),
+  uploadServiceImages("services"),
   parseArrayFields,
   validateZod(createServiceSchema),
   asyncHandler(serviceController.createService)
@@ -184,7 +184,7 @@ router.put(
   "/:id",
   authenticate,
   authorize("PROVIDER", "ADMIN", "COACH"),
-  uploadSingleImage("logo"),
+  uploadServiceImages("services"),
   validateZod(updateServiceSchema),
   asyncHandler(serviceController.updateService)
 );

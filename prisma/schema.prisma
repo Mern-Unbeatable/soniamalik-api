@@ -392,7 +392,8 @@ model Service {
     featuredBy               String?
     bannedReason             String?       @db.Text
     bannedAt                 DateTime?
-    // Image
+    // Images: listing cover + organisation logo
+    image                    String?
     logo                     String?
     // Legacy fields kept for compatibility
     duration                 Int           @default(60)
