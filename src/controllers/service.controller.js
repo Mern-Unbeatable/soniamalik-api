@@ -74,19 +74,25 @@ export async function getProviderServices(req, res) {
   }
 }
 
+function getServiceUploadPath(req, fieldName) {
+  const file = req.files?.[fieldName]?.[0];
+  if (!file) return null;
+  return `${config.backendUrl}/uploads/services/${file.filename}`;
+}
+
 export async function createService(req, res) {
   console.log('body check', req.body)
 
 
   try {
-    const logoPath = req.file
-      ? `${config.backendUrl}/uploads/services/${req.file.filename}`
-      : null;
+    const imagePath = getServiceUploadPath(req, "image");
+    const logoPath = getServiceUploadPath(req, "logo");
 
     const service = await serviceService.createService(
       req.body,
       req,
       logoPath,
+      imagePath,
     );
     return sendSuccess(res, 201, "Service submitted for approval", { service });
   } catch (error) {
@@ -99,16 +105,16 @@ export async function updateService(req, res) {
   try {
     const { id } = req.params;
 
-    const logoPath = req.file
-      ? `${config.backendUrl}/uploads/services/${req.file.filename}`
-      : null;
+    const imagePath = getServiceUploadPath(req, "image");
+    const logoPath = getServiceUploadPath(req, "logo");
 
     const service = await serviceService.updateService(
       id,
       req.body,
       req.user.id,
       req.user.role,
-      logoPath
+      logoPath,
+      imagePath,
     );
 
     return sendSuccess(res, 200, "Service updated successfully", { service });
