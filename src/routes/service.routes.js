@@ -78,6 +78,20 @@ router.patch(
 );
 
 router.patch(
+  "/:id/pending-changes/approve",
+  authenticate,
+  authorize("ADMIN"),
+  asyncHandler(serviceController.approvePendingChanges),
+);
+
+router.patch(
+  "/:id/pending-changes/reject",
+  authenticate,
+  authorize("ADMIN"),
+  asyncHandler(serviceController.rejectPendingChanges),
+);
+
+router.patch(
   "/:id/feature",
   authenticate,
   authorize("ADMIN"),

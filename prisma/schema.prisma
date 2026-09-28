@@ -165,6 +165,9 @@ model Event {
     featuredBy          String?
     bannedReason        String?             @db.Text
     bannedAt            DateTime?
+    // Edits to an approved event, held until admin approves them
+    pendingChanges      Json?
+    pendingChangesAt    DateTime?
     createdAt           DateTime            @default(now())
     updatedAt           DateTime            @updatedAt
     bookingLink         String?
@@ -392,6 +395,9 @@ model Service {
     featuredBy               String?
     bannedReason             String?       @db.Text
     bannedAt                 DateTime?
+    // Edits to an approved listing, held until admin approves them
+    pendingChanges           Json?
+    pendingChangesAt         DateTime?
     // Images: listing cover + organisation logo
     image                    String?
     logo                     String?

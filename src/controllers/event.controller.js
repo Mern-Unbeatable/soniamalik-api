@@ -41,7 +41,10 @@ export async function getEventById(req, res) {
     const userId = req.user?.id || null;
     const userRole = req.user?.role || null;
 
-    const event = await eventService.getEventById(id, userId, userRole);
+    const event = await eventService.getEventById(id, userId, userRole, {
+      includePending:
+        req.query.includePending === "true" || req.query.includePending === "1",
+    });
 
     res.status(200).json({
       success: true,
@@ -215,7 +218,9 @@ export async function updateEvent(req, res) {
 
     res.status(200).json({
       success: true,
-      message: "Event updated successfully",
+      message: updatedEvent?.submittedForApproval
+        ? "Your changes have been submitted for admin approval. The current version stays live until they are approved."
+        : "Event updated successfully",
       data: updatedEvent,
     });
   } catch (error) {
@@ -269,6 +274,24 @@ export async function updateApprovalStatus(req, res) {
   }
 }
 
+
+export async function approvePendingChanges(req, res) {
+  try {
+    const event = await eventService.approveEventPendingChanges(req.params.id);
+    return sendSuccess(res, 200, "Changes approved and now live", event);
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
+export async function rejectPendingChanges(req, res) {
+  try {
+    const event = await eventService.rejectEventPendingChanges(req.params.id);
+    return sendSuccess(res, 200, "Changes rejected", event);
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
 
 export async function registerForEvent(req, res) {
   try {

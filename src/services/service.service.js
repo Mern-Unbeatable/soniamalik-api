@@ -3,6 +3,13 @@ import { config } from "../config/index.js";
 import { ServiceStatusEnum } from "../constant/service.constant.js";
 import PrismaQueryBuilder from "../shared/query-builder.js";
 import * as  notificationService from "./notification.service.js";
+import {
+  buildPendingDiff,
+  clearPendingData,
+  hasPendingChanges,
+  mergePendingChanges,
+  withPendingApplied,
+} from "../utils/pendingChanges.js";
 
 
 
@@ -31,18 +38,32 @@ function getBookingLinkClicks(analytics) {
 
 function transformServiceUrls(service) {
   if (!service) return service;
+  const { pendingChanges, ...rest } = service;
   const bookingLink =
-    service.bookingLink && !service.bookingLink.startsWith("http")
-      ? `${config.backendUrl}${service.bookingLink}`
-      : service.bookingLink;
+    rest.bookingLink && !rest.bookingLink.startsWith("http")
+      ? `${config.backendUrl}${rest.bookingLink}`
+      : rest.bookingLink;
   return {
-    ...service,
-    image: getFullImageUrl(service.image),
+    ...rest,
+    image: getFullImageUrl(rest.image),
     bookingLink,
     shareLink:
-      service.shareLink ||
-      generateSharingLink(service.id, service.provider?.role),
-    bookingLinkClicks: getBookingLinkClicks(service.analytics),
+      rest.shareLink ||
+      generateSharingLink(rest.id, rest.provider?.role),
+    bookingLinkClicks: getBookingLinkClicks(rest.analytics),
+    hasPendingChanges: hasPendingChanges(service),
+  };
+}
+
+/** Admin view: live listing plus the staged edits and a field-by-field diff. */
+function withAdminPendingView(rawService, transformed) {
+  if (!hasPendingChanges(rawService)) return transformed;
+  const pending = { ...rawService.pendingChanges };
+  if (pending.image) pending.image = getFullImageUrl(pending.image);
+  return {
+    ...transformed,
+    pendingChanges: pending,
+    pendingDiff: buildPendingDiff(transformed, pending),
   };
 }
 
@@ -683,7 +704,12 @@ export async function getServicesByProviderRole(query = {}) {
   };
 }
 
-export async function getServiceById(serviceId, trackView = true, trackBookingLink = false) {
+export async function getServiceById(
+  serviceId,
+  trackView = true,
+  trackBookingLink = false,
+  viewer = {}
+) {
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
     include: {
@@ -794,7 +820,15 @@ export async function getServiceById(serviceId, trackView = true, trackBookingLi
     }
   }
 
-  const transformed = transformServiceUrls(service);
+  const isAdminViewer = viewer.role === "ADMIN";
+  const isOwnerView =
+    !isAdminViewer &&
+    viewer.includePending &&
+    viewer.userId &&
+    viewer.userId === service.providerId;
+  const transformed = transformServiceUrls(
+    isOwnerView ? withPendingApplied(service) : service
+  );
 
   // Calculate additional stats
   const unreadMessages = service.messages?.filter(msg => !msg.isRead).length || 0;
@@ -804,7 +838,7 @@ export async function getServiceById(serviceId, trackView = true, trackBookingLi
   const analyticsRecord = getAnalyticsRecord(service.analytics);
 
   return {
-    ...transformed,
+    ...(isAdminViewer ? withAdminPendingView(service, transformed) : transformed),
     stats: {
       views: analyticsRecord?.views || 0,
       bookingLinkClicks: analyticsRecord?.bookingLinkClicks || 0,
@@ -911,7 +945,7 @@ export async function getProviderServices(providerId, filters = {}) {
   ]);
 
   const transformedServices = services.map(service => {
-    const transformed = transformServiceUrls(service);
+    const transformed = transformServiceUrls(withPendingApplied(service));
 
     // Calculate unread messages
     const unreadMessages = service.messages?.filter(msg => !msg.isRead).length || 0;
@@ -1350,17 +1384,84 @@ export async function updateService(
       .join(", ");
   }
 
+  const providerInclude = {
+    provider: {
+      select: { id: true, name: true, email: true, avatar: true, role: true },
+    },
+  };
+
+  // Approved listings stay live as they are; the edit waits for admin approval
+  if (userRole !== "ADMIN" && service.isApproved) {
+    const pendingChanges = mergePendingChanges(service, service.pendingChanges, data);
+    const stagedService = await prisma.service.update({
+      where: { id: serviceId },
+      data: pendingChanges
+        ? { pendingChanges, pendingChangesAt: new Date() }
+        : clearPendingData(),
+      include: providerInclude,
+    });
+
+    return {
+      ...transformServiceUrls(withPendingApplied(stagedService)),
+      submittedForApproval: Boolean(pendingChanges),
+    };
+  }
+
   const updatedService = await prisma.service.update({
     where: { id: serviceId },
     data,
-    include: {
-      provider: {
-        select: { id: true, name: true, email: true, avatar: true, role: true },
-      },
-    },
+    include: providerInclude,
   });
 
   return transformServiceUrls(updatedService);
+}
+
+export async function approvePendingChanges(serviceId) {
+  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  if (!service) throw { statusCode: 404, message: "Service not found" };
+  if (!hasPendingChanges(service)) {
+    throw { statusCode: 400, message: "This listing has no changes awaiting approval" };
+  }
+
+  const updated = await prisma.service.update({
+    where: { id: serviceId },
+    data: { ...service.pendingChanges, ...clearPendingData() },
+    include: { provider: { select: { id: true, name: true, email: true, role: true } } },
+  });
+
+  await notificationService.createNotification(
+    service.providerId,
+    "SERVICE_APPROVED",
+    "✅ Listing changes approved",
+    `Your changes to "${updated.listingHeadline || "your listing"}" have been approved and are now live.`,
+    { type: "SERVICE", serviceId }
+  );
+
+  return transformServiceUrls(updated);
+}
+
+export async function rejectPendingChanges(serviceId) {
+  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  if (!service) throw { statusCode: 404, message: "Service not found" };
+  if (!hasPendingChanges(service)) {
+    throw { statusCode: 400, message: "This listing has no changes awaiting approval" };
+  }
+
+  const updated = await prisma.service.update({
+    where: { id: serviceId },
+    data: clearPendingData(),
+    include: { provider: { select: { id: true, name: true, email: true, role: true } } },
+  });
+
+  await notificationService.createNotification(
+    service.providerId,
+    "SERVICE_REJECTED",
+    "❌ Listing changes not approved",
+    `Your changes to "${service.listingHeadline || "your listing"}" were not approved. The current live version remains unchanged.`,
+    { type: "SERVICE", serviceId }
+  );
+
+  return transformServiceUrls(updated);
 }
 
 export async function deleteService(serviceId, userId, userRole) {

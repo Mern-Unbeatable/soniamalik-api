@@ -2,6 +2,40 @@ import prisma from "../config/database.js";
 import { config } from "../config/index.js";
 import PrismaQueryBuilder from "../shared/query-builder.js";
 import * as notificationService from "./notification.service.js";
+import {
+  buildPendingDiff,
+  clearPendingData,
+  hasPendingChanges,
+  mergePendingChanges,
+  stripPendingChanges,
+  withPendingApplied,
+} from "../utils/pendingChanges.js";
+
+/** Admin view: live event plus the staged edits and a field-by-field diff. */
+function withAdminPendingView(event) {
+  const base = stripPendingChanges(event);
+  if (!hasPendingChanges(event)) return base;
+  return {
+    ...base,
+    pendingChanges: event.pendingChanges,
+    pendingDiff: buildPendingDiff(event, event.pendingChanges),
+  };
+}
+
+/** Owner view: the event with their not-yet-approved edits applied. */
+function withOwnerPendingView(event) {
+  return stripPendingChanges(withPendingApplied(event));
+}
+
+const EVENT_DATE_FIELDS = ["startDate", "endDate"];
+
+function toEventUpdateData(pendingChanges) {
+  const data = { ...pendingChanges };
+  EVENT_DATE_FIELDS.forEach((field) => {
+    if (data[field]) data[field] = new Date(data[field]);
+  });
+  return data;
+}
 
 
 function generateBookingLink(eventId) {
@@ -281,7 +315,7 @@ export async function getAllEvents(query = {}, userRole = null, userId = null) {
   const result = await builder.execute("events");
 
   result.events = result.events.map((event) => ({
-    ...event,
+    ...stripPendingChanges(event),
     bookingLink: generateBookingLink(event.id),
   }));
 
@@ -291,7 +325,7 @@ export async function getAllEvents(query = {}, userRole = null, userId = null) {
 
 
 
-export async function getEventById(eventId, userId, userRole) {
+export async function getEventById(eventId, userId, userRole, { includePending = false } = {}) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
@@ -412,9 +446,18 @@ export async function getEventById(eventId, userId, userRole) {
     }
   }
 
+  let viewEvent;
+  if (userRole === "ADMIN") {
+    viewEvent = withAdminPendingView(event);
+  } else if (includePending && userId && event.organizerId === userId) {
+    viewEvent = withOwnerPendingView(event);
+  } else {
+    viewEvent = stripPendingChanges(event);
+  }
+
   // ✅ Booking link যোগ করো
   const eventWithExtras = {
-    ...event,
+    ...viewEvent,
     bookingLink: generateBookingLink(event.id),
     isSaved,
     isRegistered,
@@ -623,12 +666,6 @@ export async function updateEvent(eventId, updateData, userId, userRole) {
     data.endDate = new Date(data.endDate);
   }
 
-  // If not admin and event is approved, set back to pending
-  if (userRole !== "ADMIN" && event.isApproved) {
-    data.status = "PENDING";
-    data.isApproved = false;
-  }
-
   // Remove undefined values
   Object.keys(data).forEach(key => {
     if (data[key] === undefined) {
@@ -636,31 +673,96 @@ export async function updateEvent(eventId, updateData, userId, userRole) {
     }
   });
 
+  const eventInclude = {
+    organizer: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        role: true,
+      },
+    },
+    registrations: {
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+      },
+    },
+    analytics: true,
+  };
+
+  // Approved events stay live as they are; the edit waits for admin approval
+  if (userRole !== "ADMIN" && event.isApproved) {
+    const pendingChanges = mergePendingChanges(event, event.pendingChanges, data);
+    const stagedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: pendingChanges
+        ? { pendingChanges, pendingChangesAt: new Date() }
+        : clearPendingData(),
+      include: eventInclude,
+    });
+
+    return {
+      ...withOwnerPendingView(stagedEvent),
+      submittedForApproval: Boolean(pendingChanges),
+    };
+  }
+
   const updatedEvent = await prisma.event.update({
     where: { id: eventId },
     data: data,
-    include: {
-      organizer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-          role: true,
-        },
-      },
-      registrations: {
-        select: {
-          id: true,
-          userId: true,
-          status: true,
-        },
-      },
-      analytics: true,
-    },
+    include: eventInclude,
   });
 
-  return updatedEvent;
+  return stripPendingChanges(updatedEvent);
+}
+
+export async function approveEventPendingChanges(eventId) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) throw { statusCode: 404, message: "Event not found" };
+  if (!hasPendingChanges(event)) {
+    throw { statusCode: 400, message: "This event has no changes awaiting approval" };
+  }
+
+  const updatedEvent = await prisma.event.update({
+    where: { id: eventId },
+    data: { ...toEventUpdateData(event.pendingChanges), ...clearPendingData() },
+  });
+
+  await notificationService.createNotification(
+    event.organizerId,
+    "EVENT_APPROVED",
+    "✅ Event changes approved",
+    `Your changes to "${updatedEvent.title}" have been approved and are now live.`,
+    { type: "EVENT", eventId, eventTitle: updatedEvent.title }
+  );
+
+  return stripPendingChanges(updatedEvent);
+}
+
+export async function rejectEventPendingChanges(eventId) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) throw { statusCode: 404, message: "Event not found" };
+  if (!hasPendingChanges(event)) {
+    throw { statusCode: 400, message: "This event has no changes awaiting approval" };
+  }
+
+  const updatedEvent = await prisma.event.update({
+    where: { id: eventId },
+    data: clearPendingData(),
+  });
+
+  await notificationService.createNotification(
+    event.organizerId,
+    "EVENT_REJECTED",
+    "❌ Event changes not approved",
+    `Your changes to "${event.title}" were not approved. The current live version remains unchanged.`,
+    { type: "EVENT", eventId, eventTitle: event.title }
+  );
+
+  return stripPendingChanges(updatedEvent);
 }
 
 
@@ -1610,7 +1712,7 @@ export async function getEventsByOrganizer(organizerId, filters = {}) {
 
   // ✅ Add this mapping to include bookingLink
   const eventsWithBookingLink = result.events.map((event) => ({
-    ...event,
+    ...withOwnerPendingView(event),
     bookingLink: generateBookingLink(event.id),
   }));
 

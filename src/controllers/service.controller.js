@@ -47,7 +47,13 @@ export async function getServiceById(req, res) {
     const service = await serviceService.getServiceById(
       id,
       shouldTrackView,
-      shouldTrackBookingLink
+      shouldTrackBookingLink,
+      {
+        userId: req.user?.id || null,
+        role: req.user?.role || null,
+        includePending:
+          req.query.includePending === "true" || req.query.includePending === "1",
+      }
     );
     return sendSuccess(res, 200, "Service retrieved successfully", { service });
   } catch (error) {
@@ -117,7 +123,10 @@ export async function updateService(req, res) {
       imagePath,
     );
 
-    return sendSuccess(res, 200, "Service updated successfully", { service });
+    const message = service?.submittedForApproval
+      ? "Your changes have been submitted for admin approval. The current version stays live until they are approved."
+      : "Service updated successfully";
+    return sendSuccess(res, 200, message, { service });
   } catch (error) {
     return sendError(res, error.statusCode || 500, error.message);
   }
@@ -160,6 +169,26 @@ export async function approveService(req, res) {
   try {
     const service = await serviceService.approveService(req.params.id);
     return sendSuccess(res, 200, "Service approved successfully", { service });
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
+/** PATCH /api/services/:id/pending-changes/approve */
+export async function approvePendingChanges(req, res) {
+  try {
+    const service = await serviceService.approvePendingChanges(req.params.id);
+    return sendSuccess(res, 200, "Changes approved and now live", { service });
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
+/** PATCH /api/services/:id/pending-changes/reject */
+export async function rejectPendingChanges(req, res) {
+  try {
+    const service = await serviceService.rejectPendingChanges(req.params.id);
+    return sendSuccess(res, 200, "Changes rejected", { service });
   } catch (error) {
     return sendError(res, error.statusCode || 500, error.message);
   }
