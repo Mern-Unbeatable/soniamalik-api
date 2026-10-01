@@ -481,6 +481,7 @@ export async function createEvent(eventData, organizerId) {
     delete preparedData.contactName;
     delete preparedData.role;
     delete preparedData.orgLogo;
+    delete preparedData.isExample;
 
     if (preparedData.costType === "free") {
       preparedData.registrationFee = 0;
@@ -612,6 +613,7 @@ export async function updateEvent(eventId, updateData, userId, userRole) {
   }
 
   const data = { ...updateData };
+  delete data.isExample;
 
   // Handle array fields
   const arrayFields = ["responseMethods", "suitableFor"];
@@ -1176,6 +1178,21 @@ export async function updateRegistrationStatus(
   }
 
   return updatedRegistration;
+}
+
+/** Admin: mark or unmark an event as an example (toggles when isExample is not given). */
+export async function setEventExample(eventId, isExample) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) {
+    throw { statusCode: 404, message: "Event not found" };
+  }
+
+  const updatedEvent = await prisma.event.update({
+    where: { id: eventId },
+    data: { isExample: typeof isExample === "boolean" ? isExample : !event.isExample },
+  });
+
+  return stripPendingChanges(updatedEvent);
 }
 
 export async function toggleFeatureEvent(eventId, adminId) {
