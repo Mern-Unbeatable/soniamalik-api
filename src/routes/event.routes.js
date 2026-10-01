@@ -215,6 +215,13 @@ router.patch(
 );
 
 router.patch(
+  "/:id/example",
+  authenticate,
+  authorize("ADMIN"),
+  asyncHandler(eventController.setExampleStatus)
+);
+
+router.patch(
   "/:id/ban",
   authenticate,
   authorize("ADMIN"),
