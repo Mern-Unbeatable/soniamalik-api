@@ -1,4 +1,4 @@
-﻿import prisma from "../config/database.js";
+import prisma from "../config/database.js";
 import { config } from "../config/index.js";
 import { ServiceStatusEnum } from "../constant/service.constant.js";
 import PrismaQueryBuilder from "../shared/query-builder.js";
@@ -1127,6 +1127,7 @@ export async function createService(serviceData, req, logoPath = null, imagePath
   delete preparedData.logo;
   delete preparedData.image;
   delete preparedData.logoUrl;
+  delete preparedData.isExample;
 
   console.log('prepare data', preparedData);
 
@@ -1312,6 +1313,7 @@ export async function updateService(
 
   const data = { ...updateData };
   delete data.shareLink;
+  delete data.isExample;
   const incomingLogoUrl =
     (typeof updateData?.logoUrl === "string" && updateData.logoUrl.trim()
       ? updateData.logoUrl.trim()
@@ -1575,6 +1577,17 @@ export async function featureService(serviceId) {
       // status: toggled ? "FEATURED" : "ACTIVE",
       featuredAt: toggled ? new Date() : null,
     },
+  });
+  return transformServiceUrls(updated);
+}
+
+/** Admin: mark or unmark a listing as an example (toggles when isExample is not given). */
+export async function setServiceExample(serviceId, isExample) {
+  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  if (!service) throw { statusCode: 404, message: "Service not found" };
+  const updated = await prisma.service.update({
+    where: { id: serviceId },
+    data: { isExample: typeof isExample === "boolean" ? isExample : !service.isExample },
   });
   return transformServiceUrls(updated);
 }
