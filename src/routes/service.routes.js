@@ -99,6 +99,13 @@ router.patch(
 );
 
 router.patch(
+  "/:id/example",
+  authenticate,
+  authorize("ADMIN"),
+  asyncHandler(serviceController.setServiceExample),
+);
+
+router.patch(
   "/:id/ban",
   authenticate,
   authorize("ADMIN"),

@@ -483,6 +483,19 @@ export async function toggleFeatureStatus(req, res) {
 }
 
 
+/** PATCH /api/events/:id/example — body: { isExample } (omit to toggle) */
+export async function setExampleStatus(req, res) {
+  try {
+    const raw = req.body?.isExample;
+    const isExample = raw === undefined ? undefined : raw === true || raw === "true";
+    const event = await eventService.setEventExample(req.params.id, isExample);
+    const msg = event.isExample ? "Event marked as example listing" : "Event is no longer an example listing";
+    return sendSuccess(res, 200, msg, event);
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
 export async function toggleBanStatus(req, res) {
   try {
     const { id } = req.params;
