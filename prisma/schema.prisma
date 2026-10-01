@@ -163,6 +163,8 @@ model Event {
     isFeatured          Boolean             @default(false)
     featuredAt          DateTime?
     featuredBy          String?
+    // Set by admin; example listings open from the public cards without login
+    isExample           Boolean             @default(false)
     bannedReason        String?             @db.Text
     bannedAt            DateTime?
     // Edits to an approved event, held until admin approves them
@@ -393,6 +395,8 @@ model Service {
     isFeatured               Boolean       @default(false)
     featuredAt               DateTime?
     featuredBy               String?
+    // Set by admin; example listings open from the public cards without login
+    isExample                Boolean       @default(false)
     bannedReason             String?       @db.Text
     bannedAt                 DateTime?
     // Edits to an approved listing, held until admin approves them
