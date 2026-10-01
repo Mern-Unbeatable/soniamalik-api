@@ -224,6 +224,19 @@ export async function featureService(req, res) {
   }
 }
 
+/** PATCH /api/services/:id/example — body: { isExample } (omit to toggle) */
+export async function setServiceExample(req, res) {
+  try {
+    const raw = req.body?.isExample;
+    const isExample = raw === undefined ? undefined : raw === true || raw === "true";
+    const service = await serviceService.setServiceExample(req.params.id, isExample);
+    const msg = service.isExample ? "Listing marked as example" : "Listing is no longer an example";
+    return sendSuccess(res, 200, msg, { service });
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
 /** PATCH /api/services/:id/ban — body: { reason } */
 export async function banService(req, res) {
   try {
