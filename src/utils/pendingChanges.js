@@ -8,6 +8,7 @@ const PROTECTED_FIELDS = [
   "isFeatured",
   "featuredAt",
   "featuredBy",
+  "isExample",
   "bannedReason",
   "bannedAt",
   "rejectionReason",
