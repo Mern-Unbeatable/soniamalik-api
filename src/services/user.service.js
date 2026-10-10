@@ -1,6 +1,7 @@
 import prisma from "../config/database.js";
 import PrismaQueryBuilder from "../shared/query-builder.js";
 import { hashPassword } from "../utils/password.js";
+import { normalizeStringList } from "../utils/stringList.js";
 
 /**
  * Get all users with pagination and filters
@@ -274,11 +275,11 @@ export async function updateUser(userId, updateData) {
   }
 
   if (sportsOffered !== undefined) {
-    data.sportsOffered = sportsOffered;
+    data.sportsOffered = normalizeStringList(sportsOffered);
   }
 
   if (serviceTypes !== undefined) {
-    data.serviceTypes = serviceTypes;
+    data.serviceTypes = normalizeStringList(serviceTypes);
   }
 
   if (password) {

@@ -1,6 +1,7 @@
 import prisma from "../config/database.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { generateToken } from "../utils/jwt.js";
+import { normalizeStringList } from "../utils/stringList.js";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -69,14 +70,14 @@ export async function registerUser(userData) {
   if (role === "COACH") {
     userData_create.organizationName = organizationName;
     userData_create.sessionType = sessionType;
-    userData_create.sportsOffered = sportsOffered || [];
+    userData_create.sportsOffered = normalizeStringList(sportsOffered);
     userData_create.aboutOrganization = aboutOrganization;
   } else if (role === "PROVIDER") {
     userData_create.organizationName = organizationName;
-    userData_create.serviceTypes = serviceTypes || [];
+    userData_create.serviceTypes = normalizeStringList(serviceTypes);
     userData_create.aboutOrganization = aboutOrganization;
   } else if (role === "USER") {
-    userData_create.sportsInterests = sportsInterests || [];
+    userData_create.sportsInterests = normalizeStringList(sportsInterests);
   }
 
   const user = await prisma.user.create({
