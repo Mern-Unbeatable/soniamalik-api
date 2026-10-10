@@ -4,6 +4,31 @@ import {
   sendPaginatedResponse,
 } from "../utils/response.js";
 import * as adminService from "../services/admin.service.js";
+import * as providerInviteService from "../services/providerInvite.service.js";
+
+export async function createProvider(req, res) {
+  try {
+    const { user, inviteSent } = await providerInviteService.createInvitedProvider(req.body);
+    const message = inviteSent
+      ? "Provider created and invite sent"
+      : "Provider created, but the invite email could not be sent. Please try resending it.";
+    return sendSuccess(res, 201, message, { user, inviteSent });
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
+export async function resendProviderInvite(req, res) {
+  try {
+    const { user, inviteSent } = await providerInviteService.resendProviderInvite(req.params.id);
+    if (!inviteSent) {
+      return sendError(res, 502, "The invite email could not be sent. Please try again.");
+    }
+    return sendSuccess(res, 200, "Invite sent again", { user });
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
 
 export async function suspendUser(req, res) {
   try {

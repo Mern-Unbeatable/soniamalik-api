@@ -1,5 +1,25 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import * as authService from '../services/auth.service.js';
+import * as providerInviteService from '../services/providerInvite.service.js';
+
+export async function getInvite(req, res) {
+    try {
+        const invite = await providerInviteService.getInviteDetails(req.params.token);
+        return sendSuccess(res, 200, 'Invite is valid', invite);
+    } catch (error) {
+        return sendError(res, error.statusCode || 500, error.message);
+    }
+}
+
+export async function acceptInvite(req, res) {
+    try {
+        const { token, password, agreeToTerms } = req.body;
+        const result = await providerInviteService.acceptInvite({ token, password, agreeToTerms });
+        return sendSuccess(res, 200, 'Password set successfully. You can now log in.', result);
+    } catch (error) {
+        return sendError(res, error.statusCode || 500, error.message);
+    }
+}
 
 
 export async function register(req, res) {

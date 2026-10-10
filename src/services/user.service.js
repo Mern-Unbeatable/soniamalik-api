@@ -36,6 +36,9 @@ export const safeUserSelect = {
   aboutOrganization: true,
 
   sportsInterests: true,
+
+  invitedAt: true,
+  termsAcceptedAt: true,
 };
 
 export async function getAllUsers(query) {

@@ -197,6 +197,61 @@ export async function sendPasswordResetConfirmation(email, name) {
   }
 }
 
+export async function sendProviderInviteEmail(email, name, inviteLink, expiresInDays) {
+  const mailOptions = {
+    from: `"ESSA Hub" <${config.email.user}>`,
+    to: email,
+    subject: "Your ESSA Hub account is ready - set your password",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #0f756d; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .button { display: inline-block; padding: 14px 32px; background: #0f756d; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .link { word-break: break-all; color: #0f756d; font-size: 13px; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to ESSA Hub</h1>
+          </div>
+          <div class="content">
+            <h2>Hi ${name},</h2>
+            <p>We've set up an ESSA Hub account for you so you can reach women looking for sport and wellbeing support.</p>
+            <p>To access your account, please choose your own password and confirm you agree to our Terms &amp; Conditions:</p>
+
+            <p style="text-align: center;">
+              <a href="${inviteLink}" class="button">Set my password</a>
+            </p>
+
+            <p>Once you're in, you can review your details, add anything we've missed and create your listings.</p>
+            <p>This link will expire in ${expiresInDays} days. If it has expired, just reply to this email and we'll send you a new one.</p>
+
+            <p style="font-size: 13px; color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p class="link">${inviteLink}</p>
+
+            <p>Best regards,<br>ESSA Hub Team</p>
+          </div>
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} ESSA Hub. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log("Provider invite email sent to:", email);
+  return true;
+}
+
 /**
  * Generate 5-digit OTP
  */

@@ -16,6 +16,8 @@ import {
   getConversionFunnel,
   getContactMetadata,
   getRegisterInterests,
+  createProvider,
+  resendProviderInvite,
 } from "../controllers/admin.controller.js";
 
 const router = Router();
@@ -44,6 +46,21 @@ router.post(
 );
 
 router.post("/users/:id/unsuspend", asyncHandler(unsuspendUser));
+
+const createProviderValidation = [
+  body("email").isEmail().normalizeEmail().withMessage("Valid email required"),
+  body("role").isIn(["COACH", "PROVIDER"]).withMessage("Role must be COACH or PROVIDER"),
+  body("organizationName").notEmpty().trim().withMessage("Organisation name is required"),
+];
+
+router.post(
+  "/providers",
+  createProviderValidation,
+  validate,
+  asyncHandler(createProvider),
+);
+
+router.post("/providers/:id/resend-invite", asyncHandler(resendProviderInvite));
 
 
 router.get("/dashboard/stats", asyncHandler(getDashboardStats));

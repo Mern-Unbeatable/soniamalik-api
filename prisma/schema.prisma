@@ -37,6 +37,11 @@ model User {
     emailVerifyToken     String?
     resetPasswordToken   String?
     resetPasswordExpires DateTime?
+    // Admin-created provider accounts: token is stored hashed; termsAcceptedAt marks the invite as completed
+    inviteToken          String?
+    inviteExpires        DateTime?
+    invitedAt            DateTime?
+    termsAcceptedAt      DateTime?
     lastLogin            DateTime?
     suspensionReason     String?
     suspendedAt          DateTime?

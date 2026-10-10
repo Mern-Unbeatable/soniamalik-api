@@ -13,6 +13,8 @@ import {
   verifyOTP,
   resetPassword,
   changePassword,
+  getInvite,
+  acceptInvite,
 } from "../controllers/auth.controller.js";
 import { authenticate } from "../middlewares/auth.js";
 
@@ -154,6 +156,21 @@ router.post(
   resetPasswordValidation,
   validate,
   asyncHandler(resetPassword),
+);
+
+// Provider invite (admin-created accounts)
+router.get("/invite/:token", asyncHandler(getInvite));
+router.post(
+  "/accept-invite",
+  [
+    body("token").notEmpty().withMessage("Invite token is required"),
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters"),
+    body("agreeToTerms").isBoolean().withMessage("Terms agreement is required"),
+  ],
+  validate,
+  asyncHandler(acceptInvite),
 );
 
 // Change password route (requires authentication)
