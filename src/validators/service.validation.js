@@ -88,10 +88,24 @@ const responseTypeEnum = z.enum([
   "INTERESTED",
   "REGISTER",
 ]);
+const courseDate = z.preprocess(
+  (val) => {
+    if (val === "" || val === "null") return null;
+    return val;
+  },
+  z.string().nullable().optional()
+);
+
 export const createServiceSchema = z.object({
   listingHeadline: optionalString,
   aboutService: optionalString,
   frequency: optionalString,
+  scheduleType: z.preprocess(
+    (val) => (val === null || val === "" ? undefined : val),
+    z.enum(["REGULAR", "FIXED_TERM"]).optional()
+  ),
+  courseStartDate: courseDate,
+  courseEndDate: courseDate,
 
   providerName: optionalString,
   contactName: optionalString,

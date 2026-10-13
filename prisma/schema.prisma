@@ -383,6 +383,10 @@ model Service {
     fullAddress              String?
     // Session info
     frequency                String?
+    // REGULAR or FIXED_TERM; fixed-term courses are hidden from public lists after courseEndDate
+    scheduleType             String        @default("REGULAR")
+    courseStartDate          DateTime?
+    courseEndDate            DateTime?
     sports                   String[]      @default([])
     isOnline                 Boolean       @default(false)
     // Credentials

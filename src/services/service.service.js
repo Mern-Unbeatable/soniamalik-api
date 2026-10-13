@@ -10,6 +10,11 @@ import {
   mergePendingChanges,
   withPendingApplied,
 } from "../utils/pendingChanges.js";
+import {
+  activeCourseCondition,
+  isCourseEnded,
+  normalizeCourseSchedule,
+} from "../utils/courseSchedule.js";
 
 
 
@@ -52,6 +57,18 @@ function transformServiceUrls(service) {
       generateSharingLink(rest.id, rest.provider?.role),
     bookingLinkClicks: getBookingLinkClicks(rest.analytics),
     hasPendingChanges: hasPendingChanges(service),
+    courseEnded: isCourseEnded(rest),
+  };
+}
+
+/**
+ * Owner view: their staged edits applied, but `courseEnded` follows the live
+ * record because that is what decides visibility on public Discover.
+ */
+function transformOwnerView(service) {
+  return {
+    ...transformServiceUrls(withPendingApplied(service)),
+    courseEnded: isCourseEnded(service),
   };
 }
 
@@ -65,6 +82,23 @@ function withAdminPendingView(rawService, transformed) {
     pendingChanges: pending,
     pendingDiff: buildPendingDiff(transformed, pending),
   };
+}
+
+const PARTICIPANT_FIELDS = [
+  "bookings",
+  "messages",
+  "recentBookings",
+  "recentMessages",
+  "allBookings",
+  "allMessages",
+  "messageThreads",
+];
+
+/** Public list views: keep counts, drop participants' names, emails and messages. */
+function withoutParticipants(service) {
+  const rest = { ...service };
+  PARTICIPANT_FIELDS.forEach((field) => delete rest[field]);
+  return rest;
 }
 
 function parseArray(value) {
@@ -142,6 +176,9 @@ export async function getAllServices(query = {}) {
   if (query.insuranceInPlace !== undefined) builder._where.insuranceInPlace = toBool(query.insuranceInPlace);
   if (query.isApproved !== undefined) builder._where.isApproved = toBool(query.isApproved);
   if (query.live === "true") builder._where.endDate = { gte: now };
+  if (!query.adminView) {
+    builder._where.AND = [...(builder._where.AND || []), activeCourseCondition(now)];
+  }
 
   // -------------------------
   // DATE FILTERS
@@ -394,8 +431,10 @@ export async function getAllServices(query = {}) {
     };
   });
 
+  const services = transformedServices.map(transformServiceUrls);
+
   return {
-    services: transformedServices.map(transformServiceUrls),
+    services: query.adminView ? services : services.map(withoutParticipants),
     pagination: {
       totalPages: result.meta.totalPage,
       currentPage: result.meta.page,
@@ -529,6 +568,10 @@ export async function getServicesByProviderRole(query = {}) {
       ...where.provider,
       role: providerRole, // "COACH" | "PROVIDER"
     };
+  }
+
+  if (!query.adminView) {
+    where.AND = [...(where.AND || []), activeCourseCondition()];
   }
 
   // -------------------------
@@ -694,7 +737,7 @@ export async function getServicesByProviderRole(query = {}) {
   });
 
   return {
-    services: transformedServices,
+    services: query.adminView ? transformedServices : transformedServices.map(withoutParticipants),
     total,
     page: Number(page),
     limit: Number(limit),
@@ -826,9 +869,9 @@ export async function getServiceById(
     viewer.includePending &&
     viewer.userId &&
     viewer.userId === service.providerId;
-  const transformed = transformServiceUrls(
-    isOwnerView ? withPendingApplied(service) : service
-  );
+  const transformed = isOwnerView
+    ? transformOwnerView(service)
+    : transformServiceUrls(service);
 
   // Calculate additional stats
   const unreadMessages = service.messages?.filter(msg => !msg.isRead).length || 0;
@@ -836,9 +879,17 @@ export async function getServiceById(
     return total + (msg.replies?.filter(reply => !reply.isRead).length || 0);
   }, 0) || 0;
   const analyticsRecord = getAnalyticsRecord(service.analytics);
+  const canSeeParticipants =
+    isAdminViewer || (viewer.userId && viewer.userId === service.providerId);
+  const body = isAdminViewer ? withAdminPendingView(service, transformed) : transformed;
+  if (!canSeeParticipants) {
+    // Public / preview viewers must not receive participants' personal details
+    delete body.bookings;
+    delete body.messages;
+  }
 
   return {
-    ...(isAdminViewer ? withAdminPendingView(service, transformed) : transformed),
+    ...body,
     stats: {
       views: analyticsRecord?.views || 0,
       bookingLinkClicks: analyticsRecord?.bookingLinkClicks || 0,
@@ -945,7 +996,7 @@ export async function getProviderServices(providerId, filters = {}) {
   ]);
 
   const transformedServices = services.map(service => {
-    const transformed = transformServiceUrls(withPendingApplied(service));
+    const transformed = transformOwnerView(service);
 
     // Calculate unread messages
     const unreadMessages = service.messages?.filter(msg => !msg.isRead).length || 0;
@@ -1128,6 +1179,7 @@ export async function createService(serviceData, req, logoPath = null, imagePath
   delete preparedData.image;
   delete preparedData.logoUrl;
   delete preparedData.isExample;
+  normalizeCourseSchedule(preparedData);
 
   console.log('prepare data', preparedData);
 
@@ -1314,6 +1366,7 @@ export async function updateService(
   const data = { ...updateData };
   delete data.shareLink;
   delete data.isExample;
+  normalizeCourseSchedule(data, withPendingApplied(service));
   const incomingLogoUrl =
     (typeof updateData?.logoUrl === "string" && updateData.logoUrl.trim()
       ? updateData.logoUrl.trim()
@@ -1404,7 +1457,7 @@ export async function updateService(
     });
 
     return {
-      ...transformServiceUrls(withPendingApplied(stagedService)),
+      ...transformOwnerView(stagedService),
       submittedForApproval: Boolean(pendingChanges),
     };
   }

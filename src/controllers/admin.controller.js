@@ -5,6 +5,31 @@ import {
 } from "../utils/response.js";
 import * as adminService from "../services/admin.service.js";
 import * as providerInviteService from "../services/providerInvite.service.js";
+import * as listingReassignService from "../services/listingReassign.service.js";
+
+export async function getListingReassignCandidates(req, res) {
+  try {
+    const result = await listingReassignService.getReassignCandidates(
+      req.params.id,
+      req.query.search
+    );
+    return sendSuccess(res, 200, "Providers retrieved", result);
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
+
+export async function reassignListing(req, res) {
+  try {
+    const service = await listingReassignService.reassignListing(
+      req.params.id,
+      req.body.providerId
+    );
+    return sendSuccess(res, 200, `Listing reassigned to ${service.providerName}`, { service });
+  } catch (error) {
+    return sendError(res, error.statusCode || 500, error.message);
+  }
+}
 
 export async function createProvider(req, res) {
   try {

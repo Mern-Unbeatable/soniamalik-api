@@ -18,6 +18,8 @@ import {
   getRegisterInterests,
   createProvider,
   resendProviderInvite,
+  getListingReassignCandidates,
+  reassignListing,
 } from "../controllers/admin.controller.js";
 
 const router = Router();
@@ -61,6 +63,15 @@ router.post(
 );
 
 router.post("/providers/:id/resend-invite", asyncHandler(resendProviderInvite));
+
+router.get("/listings/:id/reassign-candidates", asyncHandler(getListingReassignCandidates));
+
+router.patch(
+  "/listings/:id/reassign",
+  [body("providerId").isString().notEmpty().withMessage("Please choose a provider")],
+  validate,
+  asyncHandler(reassignListing),
+);
 
 
 router.get("/dashboard/stats", asyncHandler(getDashboardStats));

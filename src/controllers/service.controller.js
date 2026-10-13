@@ -11,8 +11,10 @@ import * as messageService from "../services/message.service.js";
 
 export async function getAllServices(req, res) {
   try {
-    const { services, pagination } =
-      await serviceService.getAllServices(req.query);
+    const { services, pagination } = await serviceService.getAllServices({
+      ...req.query,
+      adminView: req.user?.role === "ADMIN",
+    });
     return sendPaginatedResponse(
       res,
       services,
@@ -29,7 +31,10 @@ export async function getAllServices(req, res) {
 export async function getServicesByProviderRole(req, res) {
   try {
     const { services, total, page, limit } =
-      await serviceService.getServicesByProviderRole(req.query);
+      await serviceService.getServicesByProviderRole({
+        ...req.query,
+        adminView: req.user?.role === "ADMIN",
+      });
 
     return sendPaginatedResponse(res, services, page, limit, total);
   } catch (error) {
