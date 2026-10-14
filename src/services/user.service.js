@@ -41,6 +41,105 @@ export const safeUserSelect = {
   termsAcceptedAt: true,
 };
 
+const PROVIDER_ROLES = ["COACH", "PROVIDER"];
+const CANCELLED_STATUSES = ["cancelled", "CANCELLED"];
+
+const countsByKey = (rows, key) =>
+  new Map(rows.map((row) => [row[key], row._count._all]));
+
+/**
+ * Adds the activity figures shown in the admin users tables.
+ * Providers: listings, events, responses received and booking link clicks.
+ * Players: event registrations and listing responses they made.
+ */
+async function withActivityCounts(users) {
+  const ids = users.map((user) => user.id);
+  if (ids.length === 0) return users;
+
+  const [services, events, playerEventCounts, playerInterestCounts] = await Promise.all([
+    prisma.service.findMany({
+      where: { providerId: { in: ids } },
+      select: { id: true, providerId: true, analytics: { select: { bookingLinkClicks: true } } },
+    }),
+    prisma.event.findMany({
+      where: { organizerId: { in: ids } },
+      select: { id: true, organizerId: true },
+    }),
+    prisma.eventRegistration.groupBy({
+      by: ["userId"],
+      where: { userId: { in: ids }, status: { notIn: CANCELLED_STATUSES } },
+      _count: { _all: true },
+    }),
+    prisma.serviceBooking.groupBy({
+      by: ["userId"],
+      where: { userId: { in: ids }, status: { notIn: CANCELLED_STATUSES } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const [serviceResponseCounts, eventResponseCounts] = await Promise.all([
+    services.length
+      ? prisma.serviceBooking.groupBy({
+          by: ["serviceId"],
+          where: {
+            serviceId: { in: services.map((service) => service.id) },
+            status: { notIn: CANCELLED_STATUSES },
+          },
+          _count: { _all: true },
+        })
+      : [],
+    events.length
+      ? prisma.eventRegistration.groupBy({
+          by: ["eventId"],
+          where: {
+            eventId: { in: events.map((event) => event.id) },
+            status: { notIn: CANCELLED_STATUSES },
+          },
+          _count: { _all: true },
+        })
+      : [],
+  ]);
+
+  const responsesPerService = countsByKey(serviceResponseCounts, "serviceId");
+  const responsesPerEvent = countsByKey(eventResponseCounts, "eventId");
+  const eventsPerPlayer = countsByKey(playerEventCounts, "userId");
+  const interestPerPlayer = countsByKey(playerInterestCounts, "userId");
+
+  const providerStats = new Map(
+    ids.map((id) => [
+      id,
+      { listingsCount: 0, eventsCount: 0, interestReceived: 0, externalLinkClicks: 0 },
+    ]),
+  );
+
+  for (const service of services) {
+    const stats = providerStats.get(service.providerId);
+    stats.listingsCount += 1;
+    stats.interestReceived += responsesPerService.get(service.id) || 0;
+    stats.externalLinkClicks += service.analytics.reduce(
+      (sum, record) => sum + (record.bookingLinkClicks || 0),
+      0,
+    );
+  }
+
+  for (const event of events) {
+    const stats = providerStats.get(event.organizerId);
+    stats.eventsCount += 1;
+    stats.interestReceived += responsesPerEvent.get(event.id) || 0;
+  }
+
+  return users.map((user) => {
+    if (PROVIDER_ROLES.includes(user.role)) {
+      return { ...user, ...providerStats.get(user.id) };
+    }
+    return {
+      ...user,
+      eventsCount: eventsPerPlayer.get(user.id) || 0,
+      interestCount: interestPerPlayer.get(user.id) || 0,
+    };
+  });
+}
+
 export async function getAllUsers(query) {
   const qb = new PrismaQueryBuilder(prisma.user, query, {
     searchableFields: ["name", "email", "displayName"],
@@ -77,7 +176,7 @@ export async function getAllUsers(query) {
   ]);
 
   return {
-    users,
+    users: await withActivityCounts(users),
     total,
     page: qb._page || 1,
     limit: qb._take || 20,

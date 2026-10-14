@@ -236,33 +236,22 @@ export async function getDashboardStats() {
   });
   const previousMessages = previousEventMessages + previousServiceMessages;
 
-  // Outbound Clicks (event views + service views)
-  const eventViews = await prisma.eventAnalytics.aggregate({
-    _sum: { views: true }
+  // Outbound Clicks (clicks on listing booking links; event links are not tracked)
+  const linkClicks = await prisma.serviceAnalytics.aggregate({
+    _sum: { bookingLinkClicks: true }
   });
-  const serviceViews = await prisma.serviceAnalytics.aggregate({
-    _sum: { views: true }
-  });
-  const outboundClicks = (eventViews._sum.views || 0) + (serviceViews._sum.views || 0);
+  const outboundClicks = linkClicks._sum.bookingLinkClicks || 0;
 
   // Previous month outbound clicks
-  const previousEventViews = await prisma.eventAnalytics.aggregate({
-    _sum: { views: true },
-    where: {
-      event: {
-        createdAt: { lt: lastMonth }
-      }
-    }
-  });
-  const previousServiceViews = await prisma.serviceAnalytics.aggregate({
-    _sum: { views: true },
+  const previousLinkClicks = await prisma.serviceAnalytics.aggregate({
+    _sum: { bookingLinkClicks: true },
     where: {
       service: {
         createdAt: { lt: lastMonth }
       }
     }
   });
-  const previousOutboundClicks = (previousEventViews._sum.views || 0) + (previousServiceViews._sum.views || 0);
+  const previousOutboundClicks = previousLinkClicks._sum.bookingLinkClicks || 0;
 
   // Pending Approvals
   const pendingEvents = await prisma.event.count({
