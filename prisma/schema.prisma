@@ -83,6 +83,7 @@ model User {
     notifications        Notification[]
     userInterestRequests UserInterestRequest[]
     savedEvents          SavedEvent[]
+    listingDrafts        ListingDraft[]
 
     @@map("users")
 }
@@ -810,6 +811,34 @@ model Brand {
     message          String
 
     @@map("brands")
+}
+
+// Clicks on a Marketplace brand's "Shop Brand" button; brandKey is the slug from the frontend brand list
+model BrandClick {
+    id        String   @id @default(uuid())
+    brandKey  String
+    createdAt DateTime @default(now())
+
+    @@index([brandKey, createdAt])
+    @@map("brand_clicks")
+}
+
+// Unfinished listing/event forms saved by providers; kind is SERVICE or EVENT.
+// Kept apart from services/events so drafts never reach public or admin lists.
+model ListingDraft {
+    id        String   @id @default(uuid())
+    ownerId   String
+    owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+    kind      String
+    title     String?
+    data      Json
+    image     String?
+    logo      String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([ownerId, kind])
+    @@map("listing_drafts")
 }
 
 enum NotificationType {

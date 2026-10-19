@@ -9,6 +9,7 @@ import {
   generateOTP,
   generateVerificationCode,
 } from "./email.service.js";
+import { sendAdminAlert, describeRole } from "./adminAlert.service.js";
 
 export async function registerUser(userData) {
   const {
@@ -106,6 +107,24 @@ export async function registerUser(userData) {
 
   // No email verification required
   const token = generateToken(user.id);
+
+  const alertName =
+    user.organizationName ||
+    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+    user.name ||
+    user.email;
+  sendAdminAlert({
+    subject: `New sign-up: ${alertName} (${describeRole(user.role)})`,
+    heading: "A new user has signed up",
+    rows: [
+      ["Name", alertName],
+      ["Email", user.email],
+      ["Account type", describeRole(user.role)],
+      ["Postcode", user.postcode],
+    ],
+    linkPath: "/admin/users",
+    linkLabel: "Open Users in admin",
+  });
 
 
   return {

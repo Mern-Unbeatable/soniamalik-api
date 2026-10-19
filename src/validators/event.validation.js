@@ -369,6 +369,8 @@ export const createEventSchema = z
     }, z.boolean().optional()),
 
     image: z.string().optional(),
+    /** Draft this event was completed from; removed once the event is created */
+    draftId: z.string().optional(),
 
     currentParticipants: optionalNumber,
     responseMethods: z.array(z.string()).optional(),

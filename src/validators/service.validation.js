@@ -159,9 +159,12 @@ export const createServiceSchema = z.object({
   sessonDay: optionalString,
   date: optionalString,
   timeSlote: optionalString,
+
+  /** Draft this listing was completed from; removed once the listing is created */
+  draftId: optionalString,
 });
 
-export const updateServiceSchema = createServiceSchema.partial();
+export const updateServiceSchema = createServiceSchema.omit({ draftId: true }).partial();
 export const updateBookingStatusSchema = z.object({
   status: z.enum([
     "PENDING",

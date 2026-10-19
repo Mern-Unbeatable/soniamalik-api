@@ -15,6 +15,8 @@ import {
   isCourseEnded,
   normalizeCourseSchedule,
 } from "../utils/courseSchedule.js";
+import { findDraftForSubmit, removeSubmittedDraft } from "./draft.service.js";
+import { sendAdminAlert, describeRole, adminServicePath } from "./adminAlert.service.js";
 
 
 
@@ -1179,7 +1181,9 @@ export async function createService(serviceData, req, logoPath = null, imagePath
   delete preparedData.image;
   delete preparedData.logoUrl;
   delete preparedData.isExample;
+  delete preparedData.draftId;
   normalizeCourseSchedule(preparedData);
+  const draft = await findDraftForSubmit(serviceData?.draftId, req.user.id, "SERVICE");
 
   console.log('prepare data', preparedData);
 
@@ -1282,6 +1286,11 @@ export async function createService(serviceData, req, logoPath = null, imagePath
     finalLogo = incomingLogoUrl;
   }
 
+  if (draft) {
+    finalImage = finalImage || draft.image || null;
+    finalLogo = finalLogo || draft.logo || null;
+  }
+
   try {
     const service = await prisma.service.create({
       data: {
@@ -1313,6 +1322,23 @@ export async function createService(serviceData, req, logoPath = null, imagePath
     });
 
     const shareLink = generateSharingLink(service.id, req.user.role);
+    await removeSubmittedDraft(draft);
+
+    if (req.user.role !== "ADMIN") {
+      sendAdminAlert({
+        subject: `New listing awaiting approval: ${service.listingHeadline || "Untitled listing"}`,
+        heading: "A new listing has been submitted for approval",
+        rows: [
+          ["Listing", service.listingHeadline || "Untitled listing"],
+          ["Provider", req.user.organizationName || req.user.name],
+          ["Provider email", req.user.email],
+          ["Listing type", describeRole(req.user.role)],
+          ["Location", service.city || service.postcode],
+        ],
+        linkPath: adminServicePath(service.id, req.user.role),
+        linkLabel: "Review listing",
+      });
+    }
 
     try {
       const savedService = await prisma.service.update({
@@ -1455,6 +1481,20 @@ export async function updateService(
         : clearPendingData(),
       include: providerInclude,
     });
+
+    if (pendingChanges) {
+      sendAdminAlert({
+        subject: `Listing edit awaiting approval: ${service.listingHeadline || "Untitled listing"}`,
+        heading: "A live listing has changes waiting for approval",
+        rows: [
+          ["Listing", service.listingHeadline || "Untitled listing"],
+          ["Provider", stagedService.provider?.name || service.providerName],
+          ["Provider email", stagedService.provider?.email || service.providerEmail],
+        ],
+        linkPath: adminServicePath(service.id, stagedService.provider?.role || userRole),
+        linkLabel: "Review changes",
+      });
+    }
 
     return {
       ...transformOwnerView(stagedService),

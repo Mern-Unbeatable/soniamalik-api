@@ -18,6 +18,8 @@ import interestRequestRoutes from "./interestRequest.routes.js";
 import inqueryRoutes from './inquiry.route.js'
 import sportsCategoryRoutes from './sportsCategory.route.js'
 import contactRoutes from './contact.routes.js'
+import draftRoutes from "./draft.routes.js";
+import marketplaceRoutes from "./marketplace.routes.js";
 const router = Router();
 
 // Health check
@@ -49,4 +51,6 @@ router.use("/interest-requests", interestRequestRoutes);
 router.use("/inquiries", inqueryRoutes);
 router.use("/sports-categories", sportsCategoryRoutes);
 router.use("/contacts", contactRoutes)
+router.use("/drafts", draftRoutes);
+router.use("/marketplace", marketplaceRoutes);
 export default router;

@@ -10,6 +10,14 @@ import {
   stripPendingChanges,
   withPendingApplied,
 } from "../utils/pendingChanges.js";
+import { findDraftForSubmit, removeSubmittedDraft } from "./draft.service.js";
+import { sendAdminAlert, adminEventPath } from "./adminAlert.service.js";
+
+const formatAlertDate = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+};
 
 /** Admin view: live event plus the staged edits and a field-by-field diff. */
 function withAdminPendingView(event) {
@@ -482,6 +490,12 @@ export async function createEvent(eventData, organizerId) {
     delete preparedData.role;
     delete preparedData.orgLogo;
     delete preparedData.isExample;
+    delete preparedData.draftId;
+
+    const draft = await findDraftForSubmit(eventData?.draftId, organizerId, "EVENT");
+    if (draft && !preparedData.image) {
+      preparedData.image = draft.image || null;
+    }
 
     if (preparedData.costType === "free") {
       preparedData.registrationFee = 0;
@@ -581,6 +595,24 @@ export async function createEvent(eventData, organizerId) {
         },
       },
     });
+
+    await removeSubmittedDraft(draft);
+
+    if (event.organizer?.role !== "ADMIN") {
+      sendAdminAlert({
+        subject: `New event awaiting approval: ${event.title || "Untitled event"}`,
+        heading: "A new event has been submitted for approval",
+        rows: [
+          ["Event", event.title || "Untitled event"],
+          ["Organiser", event.organizer?.name || event.organizerName],
+          ["Organiser email", event.organizer?.email || event.organizerEmail],
+          ["Date", formatAlertDate(event.startDate)],
+          ["Location", event.city || event.location],
+        ],
+        linkPath: adminEventPath(event.id),
+        linkLabel: "Review event",
+      });
+    }
 
     const eventWithBookingLink = {
       ...event,
@@ -705,6 +737,20 @@ export async function updateEvent(eventId, updateData, userId, userRole) {
         : clearPendingData(),
       include: eventInclude,
     });
+
+    if (pendingChanges) {
+      sendAdminAlert({
+        subject: `Event edit awaiting approval: ${event.title || "Untitled event"}`,
+        heading: "A live event has changes waiting for approval",
+        rows: [
+          ["Event", event.title || "Untitled event"],
+          ["Organiser", stagedEvent.organizer?.name || event.organizerName],
+          ["Organiser email", stagedEvent.organizer?.email || event.organizerEmail],
+        ],
+        linkPath: adminEventPath(event.id),
+        linkLabel: "Review changes",
+      });
+    }
 
     return {
       ...withOwnerPendingView(stagedEvent),

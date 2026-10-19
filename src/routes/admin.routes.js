@@ -21,6 +21,7 @@ import {
   getListingReassignCandidates,
   reassignListing,
 } from "../controllers/admin.controller.js";
+import { getBrandClickStats } from "../controllers/marketplace.controller.js";
 
 const router = Router();
 
@@ -75,6 +76,8 @@ router.patch(
 
 
 router.get("/dashboard/stats", asyncHandler(getDashboardStats));
+
+router.get("/brand-clicks", getBrandClickStats);
 
 router.get("/dashboard/user-trends", asyncHandler(getUserTrends));
 

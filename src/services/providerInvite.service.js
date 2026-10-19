@@ -3,19 +3,14 @@ import prisma from "../config/database.js";
 import { config } from "../config/index.js";
 import { hashPassword } from "../utils/password.js";
 import { normalizeStringList } from "../utils/stringList.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 import { sendProviderInviteEmail } from "./email.service.js";
+import { sendAdminAlert, describeRole } from "./adminAlert.service.js";
 
 const INVITE_EXPIRY_DAYS = 7;
 const PROVIDER_ROLES = ["COACH", "PROVIDER"];
 
 const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
-
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 
 const trimOrNull = (value) => {
   const text = typeof value === "string" ? value.trim() : "";
@@ -174,6 +169,18 @@ export async function acceptInvite({ token, password, agreeToTerms }) {
       inviteToken: null,
       inviteExpires: null,
     },
+  });
+
+  sendAdminAlert({
+    subject: `Invited provider activated their account: ${user.organizationName || user.name || user.email}`,
+    heading: "An invited provider has set up their account",
+    rows: [
+      ["Organisation", user.organizationName || user.name],
+      ["Email", user.email],
+      ["Account type", describeRole(user.role)],
+    ],
+    linkPath: "/admin/users",
+    linkLabel: "Open Users in admin",
   });
 
   return { email: user.email };
