@@ -1182,6 +1182,8 @@ export async function createService(serviceData, req, logoPath = null, imagePath
   delete preparedData.logoUrl;
   delete preparedData.isExample;
   delete preparedData.draftId;
+  delete preparedData.uploadMode;
+  const separateUploads = serviceData?.uploadMode === "separate";
   normalizeCourseSchedule(preparedData);
   const draft = await findDraftForSubmit(serviceData?.draftId, req.user.id, "SERVICE");
 
@@ -1273,7 +1275,10 @@ export async function createService(serviceData, req, logoPath = null, imagePath
   let finalImage = imagePath || null;
   let finalLogo = null;
 
-  if (imagePath) {
+  if (separateUploads) {
+    finalImage = imagePath || null;
+    finalLogo = logoPath || incomingLogoUrl || null;
+  } else if (imagePath) {
     finalImage = imagePath;
     finalLogo = logoPath || incomingLogoUrl || null;
   } else if (logoPath && incomingLogoUrl) {
@@ -1404,6 +1409,8 @@ export async function updateService(
   delete data.logo;
   delete data.image;
   delete data.logoUrl;
+  delete data.uploadMode;
+  const separateUploads = updateData?.uploadMode === "separate";
 
   // Clean the data similar to create
   if (data.duration !== undefined) {
@@ -1435,7 +1442,10 @@ export async function updateService(
     }
   });
 
-  if (imagePath) {
+  if (separateUploads) {
+    if (imagePath) data.image = imagePath;
+    if (logoPath || incomingLogoUrl) data.logo = logoPath || incomingLogoUrl;
+  } else if (imagePath) {
     data.image = imagePath;
     if (logoPath) {
       data.logo = logoPath;

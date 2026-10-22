@@ -144,6 +144,8 @@ export const createServiceSchema = z.object({
   logo: optionalString,
   /** Org / club logo URL when the file field `logo` is used for the listing cover */
   logoUrl: optionalString,
+  /** "separate": `image` file is always the cover and `logo` file is always the logo */
+  uploadMode: optionalString,
 
   duration: optionalNumber,
   visibility: optionalString,

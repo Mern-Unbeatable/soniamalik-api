@@ -357,7 +357,8 @@ export async function changePassword(userId, currentPassword, newPassword) {
   const isPasswordValid = await comparePassword(currentPassword, user.password);
 
   if (!isPasswordValid) {
-    throw { statusCode: 401, message: "Current password is incorrect" };
+    // Not 401: the frontend treats 401 as an expired session and logs the user out.
+    throw { statusCode: 400, message: "Current password is incorrect" };
   }
 
   const isSamePassword = await comparePassword(newPassword, user.password);
