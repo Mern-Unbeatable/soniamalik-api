@@ -758,6 +758,16 @@ export async function updateEvent(eventId, updateData, userId, userRole) {
     };
   }
 
+  const effectiveEndDate = data.endDate || event.endDate;
+  const effectiveStartDate = data.startDate || event.startDate;
+  const now = new Date();
+
+  if (effectiveEndDate && new Date(effectiveEndDate) >= now) {
+    if (event.status === "COMPLETED" || event.status === "PAST") {
+      data.status = effectiveStartDate && new Date(effectiveStartDate) > now ? "UPCOMING" : "ONGOING";
+    }
+  }
+
   const updatedEvent = await prisma.event.update({
     where: { id: eventId },
     data: data,
@@ -774,9 +784,20 @@ export async function approveEventPendingChanges(eventId) {
     throw { statusCode: 400, message: "This event has no changes awaiting approval" };
   }
 
+  const updatePayload = { ...toEventUpdateData(event.pendingChanges), ...clearPendingData() };
+  const effectiveEndDate = updatePayload.endDate || event.endDate;
+  const effectiveStartDate = updatePayload.startDate || event.startDate;
+  const now = new Date();
+
+  if (effectiveEndDate && new Date(effectiveEndDate) >= now) {
+    if (event.status === "COMPLETED" || event.status === "PAST") {
+      updatePayload.status = effectiveStartDate && new Date(effectiveStartDate) > now ? "UPCOMING" : "ONGOING";
+    }
+  }
+
   const updatedEvent = await prisma.event.update({
     where: { id: eventId },
-    data: { ...toEventUpdateData(event.pendingChanges), ...clearPendingData() },
+    data: updatePayload,
   });
 
   await notificationService.createNotification(

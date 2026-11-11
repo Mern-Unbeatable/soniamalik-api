@@ -107,7 +107,7 @@ async function runEventStatusUpdate() {
             where: {
                 isApproved: true,
                 status: {
-                    in: ["APPROVED", "UPCOMING", "ONGOING"],
+                    in: ["APPROVED", "UPCOMING", "ONGOING", "COMPLETED"],
                 },
             },
             select: {
